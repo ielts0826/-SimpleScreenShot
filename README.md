@@ -4,7 +4,7 @@
 
 一款基于 C#、.NET 8 和 Avalonia UI 构建的现代化、轻量级 Windows 截图工具，采用 NativeAOT 技术发布，旨在提供流畅的用户体验。
 
-![主界面截图](images/main_window.png) <!-- 提示：请替换为您的实际截图链接 -->
+![主界面截图](https://i.imgur.com/PMdArNK.png) <!-- 提示：请替换为您的实际截图链接 -->
 
 ## ✨ 功能特性
 
