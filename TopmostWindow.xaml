@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ScreenCaptureTool.TopmostWindow"
+        Title="截图预览"
+        Width="600" 
+        Height="400" 
+        CanResize="True" 
+        SystemDecorations="Full" 
+        Background="Gray" 
+        Topmost="True">
+    <Grid>
+        <Panel Name="ImageContainer" ClipToBounds="True" Background="Transparent" 
+               PointerWheelChanged="ImageContainer_PointerWheelChanged" 
+               PointerPressed="ImageContainer_PointerPressed"
+               PointerMoved="ImageContainer_PointerMoved"
+               PointerReleased="ImageContainer_PointerReleased">
+            <Image x:Name="PreviewImage" 
+                   Stretch="Uniform" 
+                   RenderTransformOrigin="0.5,0.5"/> 
+        </Panel>
+
+        <Button Content="保存"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom" 
+                Margin="10"
+                Padding="10,5"
+                Click="SaveButton_Click"/>
+        
+        <Button Content="关闭"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom" 
+                Margin="10,10,80,10" 
+                Padding="10,5"
+                Click="CloseButton_Click"/>
+    </Grid>
+</Window>

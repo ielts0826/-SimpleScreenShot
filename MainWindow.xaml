@@ -1,0 +1,131 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:icons="clr-namespace:Avalonia.Media.Imaging;assembly=Avalonia.Media" 
+        x:Class="ScreenCaptureTool.MainWindow"
+        Title="简易截图"
+        Width="450" 
+        Height="400"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/screenshot_icon.ico"
+        CornerRadius="8" 
+        >
+        <!-- Window Size Further Increased -->
+        <!-- Added Window CornerRadius -->
+        <!-- Example icon namespace: xmlns:icons="clr-namespace:Avalonia.Media.Imaging;assembly=Avalonia.Media" -->
+
+    <Window.Styles>
+        <!-- Base Button Style -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="6"/> 
+            <Setter Property="Padding" Value="10,6"/> <!-- Adjusted Padding -->
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="MinWidth" Value="120"/> <!-- Adjusted MinWidth -->
+            <Setter Property="Height" Value="36"/> <!-- Added explicit Height -->
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <!-- <Setter Property="VerticalContentAlignment" Value="Center"/> Let default handle -->
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <!-- Style for Secondary Buttons (e.g., Set, Browse) -->
+        <Style Selector="Button.secondary">
+            <Setter Property="MinWidth" Value="60"/> 
+            <Setter Property="Height" Value="32"/> <!-- Explicit height for secondary buttons -->
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="12"/>
+             <!-- Consider using a less prominent background or border -->
+             <!-- <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabledBrush}"/> -->
+        </Style>
+         <Style Selector="TextBox">
+            <Setter Property="CornerRadius" Value="6"/> <!-- Match button rounding -->
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.Status">
+            <Setter Property="Margin" Value="0,10,0,0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}"/> <!-- Use theme resource for subtle color -->
+            <Setter Property="FontSize" Value="12"/> <!-- Slightly smaller status text -->
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="20"> <!-- Increase overall margin -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="*"/> <!-- Buttons -->
+            <RowDefinition Height="Auto"/> <!-- Hotkey Settings -->
+            <RowDefinition Height="Auto"/> <!-- Default Path Settings -->
+            <RowDefinition Height="5"/>  <!-- Spacer -->
+            <RowDefinition Height="Auto"/> <!-- Status Text -->
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="简易截图" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Grid.Row="0" Margin="0,5,0,20"/> <!-- Adjust title style and margin -->
+
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="15"> 
+             <!-- Consider adding icons to buttons later -->
+            <Button Name="FullScreenButton" Content="全屏截图" Click="FullScreenButton_Click"/>
+            <Button Name="RegionButton" Content="区域截图" Click="RegionButton_Click"/>
+        </StackPanel>
+
+        <!-- Hotkey Setting Area - Wrapped in Border -->
+        <Border Grid.Row="2" Margin="0,35,0,0" Padding="15,10" CornerRadius="8" Background="{DynamicResource LayerFillColorDefaultBrush}">
+          <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="75"/> <!-- Label - Fixed Width for alignment -->
+                <ColumnDefinition Width="*"/>    <!-- TextBox -->
+                <ColumnDefinition Width="Auto"/> <!-- Button -->
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+              <TextBlock Text="全屏热键:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+              <TextBox Name="FullScreenHotkeyTextBox" Grid.Row="0" Grid.Column="1" Width="140" IsReadOnly="True"/>
+              <Button Name="SetFullScreenHotkeyButton" Classes="secondary" Grid.Row="0" Grid.Column="2" Content="设置" Click="SetFullScreenHotkeyButton_Click"/>
+
+              <!-- Add top margin to the second row TextBlock for spacing -->
+              <TextBlock Text="区域热键:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,10,10,0"/> 
+              <TextBox Name="RegionHotkeyTextBox" Grid.Row="1" Grid.Column="1" Width="140" IsReadOnly="True" Margin="0,5,0,0"/> <!-- Keep margin on TextBox for vertical spacing with label -->
+              <Button Name="SetRegionHotkeyButton" Classes="secondary" Grid.Row="1" Grid.Column="2" Content="设置" Click="SetRegionHotkeyButton_Click"/> <!-- Remove margin from Button -->
+          </Grid>
+        </Border>
+
+        <!-- Default Save Path Setting Area - Wrapped in Border -->
+         <Border Grid.Row="3" Margin="0,15,0,0" Padding="15,10" CornerRadius="8" Background="{DynamicResource LayerFillColorDefaultBrush}">
+            <StackPanel>
+                <CheckBox Name="UseDefaultPathCheckBox" Content="启用默认保存路径" Checked="UseDefaultPathCheckBox_Changed" Unchecked="UseDefaultPathCheckBox_Changed" Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBox Name="DefaultPathTextBox" Width="280" Margin="0,0,5,0" IsReadOnly="True" Watermark="未设置默认路径"/> 
+                    <Button Name="BrowseDefaultPathButton" Classes="secondary" Content="浏览..." Click="BrowseDefaultPathButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Status Text and Help Button -->
+        <Grid Grid.Row="5" Margin="0,15,0,0">
+             <Grid.ColumnDefinitions>
+                 <ColumnDefinition Width="*"/>
+                 <ColumnDefinition Width="Auto"/>
+             </Grid.ColumnDefinitions>
+             <TextBlock Name="StatusText" Classes="Status" Text="准备就绪" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"/> 
+             <Button Name="HelpButton" Content="?" Classes="secondary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="30" Padding="5" Click="HelpButton_Click" ToolTip.Tip="打开帮助说明"/>
+        </Grid>
+        
+        <!-- 用于区域截图时显示背景的图像 -->
+        <Image Name="BackgroundCaptureImage" 
+               Stretch="Fill" 
+               IsVisible="False" 
+               ZIndex="0"/> <!-- 在最底层 -->
+
+        <!-- 截图选择覆盖层 -->
+        <Grid Name="Overlay" Background="#33000000" IsVisible="False" ZIndex="100">
+            <Canvas Name="SelectionCanvas"/>
+        </Grid>
+        
+        <!-- 预览图像 (暂时不用，预览在TopmostWindow) -->
+        <!-- <Image x:Name="PreviewImage" 
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               IsVisible="False"/> -->
+    </Grid>
+</Window>
