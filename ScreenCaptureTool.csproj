@@ -20,11 +20,12 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.2.7">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
-  </ItemGroup>
-  
+       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+     </PackageReference>
+     <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+     <PackageReference Include="System.Reactive" Version="6.0.1" /> <!-- Or latest stable version -->
+   </ItemGroup>
+   
   <!-- 确保所有XAML和Assets文件都被包含为AvaloniaResource -->
   <ItemGroup>
     <AvaloniaResource Include="**\*.xaml" />

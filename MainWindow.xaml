@@ -95,33 +95,28 @@
                 <CheckBox Name="UseDefaultPathCheckBox" Content="启用默认保存路径" Checked="UseDefaultPathCheckBox_Changed" Unchecked="UseDefaultPathCheckBox_Changed" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal">
                     <TextBox Name="DefaultPathTextBox" Width="280" Margin="0,0,5,0" IsReadOnly="True" Watermark="未设置默认路径"/> 
-                    <Button Name="BrowseDefaultPathButton" Classes="secondary" Content="浏览..." Click="BrowseDefaultPathButton_Click"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
+              <Button Name="BrowseDefaultPathButton" Classes="secondary" Content="浏览..." Click="BrowseDefaultPathButton_Click"/>
+                 </StackPanel>
+             </StackPanel>
+         </Border>
 
-        <!-- Status Text and Help Button -->
-        <Grid Grid.Row="5" Margin="0,15,0,0">
+         <!-- Status Text and Help Button -->
+         <Grid Grid.Row="5" Margin="0,15,0,0">
              <Grid.ColumnDefinitions>
                  <ColumnDefinition Width="*"/>
                  <ColumnDefinition Width="Auto"/>
              </Grid.ColumnDefinitions>
-             <TextBlock Name="StatusText" Classes="Status" Text="准备就绪" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"/> 
-             <Button Name="HelpButton" Content="?" Classes="secondary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="30" Padding="5" Click="HelpButton_Click" ToolTip.Tip="打开帮助说明"/>
-        </Grid>
-        
-        <!-- 用于区域截图时显示背景的图像 -->
-        <Image Name="BackgroundCaptureImage" 
-               Stretch="Fill" 
-               IsVisible="False" 
-               ZIndex="0"/> <!-- 在最底层 -->
-
-        <!-- 截图选择覆盖层 -->
-        <Grid Name="Overlay" Background="#33000000" IsVisible="False" ZIndex="100">
-            <Canvas Name="SelectionCanvas"/>
-        </Grid>
-        
-        <!-- 预览图像 (暂时不用，预览在TopmostWindow) -->
+              <TextBlock Name="StatusText" Classes="Status" Text="准备就绪" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"/> 
+              <Button Name="HelpButton" Content="?" Classes="secondary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="30" Padding="5" Click="HelpButton_Click" ToolTip.Tip="打开帮助说明"/>
+         </Grid>
+         
+         <!-- Removed Overlay related controls -->
+         <!-- <Image Name="BackgroundCaptureImage" ... /> -->
+         <!-- <Grid Name="Overlay" ... > -->
+         <!--     <Canvas Name="SelectionCanvas"/> -->
+         <!-- </Grid> -->
+         
+         <!-- 预览图像 (暂时不用，预览在TopmostWindow) -->
         <!-- <Image x:Name="PreviewImage" 
                Stretch="Uniform"
                HorizontalAlignment="Center"

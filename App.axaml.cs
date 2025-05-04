@@ -57,11 +57,15 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                 LogToFile($"App: 创建 MainWindow 出错: {ex}");
-                 Console.WriteLine($"App: Error creating MainWindow: {ex}");
-            }
-        }
-        else
+                  LogToFile($"App: 创建 MainWindow 出错: {ex}");
+                  Console.WriteLine($"App: Error creating MainWindow: {ex}");
+             }
+
+             // Subscribe to the ShutdownRequested event to clean up resources
+             desktop.ShutdownRequested += OnShutdownRequested;
+             LogToFile("App: 已订阅 ShutdownRequested 事件");
+         }
+         else
         {
              LogToFile("App: ApplicationLifetime 不是 IClassicDesktopStyleApplicationLifetime");
              Console.WriteLine("App: ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime.");
@@ -80,7 +84,17 @@ public partial class App : Application
              Console.WriteLine($"App: Error in base.OnFrameworkInitializationCompleted: {ex}");
         }
         
-        LogToFile("App: OnFrameworkInitializationCompleted 结束");
-        Console.WriteLine("App: OnFrameworkInitializationCompleted finished.");
+         LogToFile("App: OnFrameworkInitializationCompleted 结束");
+         Console.WriteLine("App: OnFrameworkInitializationCompleted finished.");
+     }
+
+    // Event handler for application shutdown
+    private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    {
+        LogToFile("App: ShutdownRequested 事件触发，执行清理...");
+        Console.WriteLine("App: ShutdownRequested event triggered, performing cleanup...");
+        User32Hotkey.Cleanup(); // Call the cleanup method for the hotkey resources
+        LogToFile("App: User32Hotkey 清理完成");
+        Console.WriteLine("App: User32Hotkey cleanup finished.");
     }
-}
+ }

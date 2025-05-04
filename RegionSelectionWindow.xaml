@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ScreenCaptureTool.RegionSelectionWindow"
+        Title="选择区域"
+        SystemDecorations="None" 
+        WindowState="FullScreen"
+        Background="Transparent" 
+        TransparencyLevelHint="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"> 
+        <!-- Ensure it stays on top -->
+
+    <Grid Name="MainGrid">
+        <!-- Image to display the full-screen background -->
+        <Image Name="BackgroundImage" Stretch="Fill"/>
+
+        <!-- Canvas for drawing the selection rectangle -->
+        <Canvas Name="SelectionCanvas" Background="#33000000"> 
+            <!-- Semi-transparent overlay effect on the canvas itself -->
+            <!-- The selection rectangle will be added from code-behind -->
+        </Canvas>
+    </Grid>
+</Window>
