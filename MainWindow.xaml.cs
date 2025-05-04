@@ -294,13 +294,13 @@ public partial class MainWindow : Window
             LogToFile($"MainWindow: 全屏截图过程出错: {ex}");
             this.Show(); // 确保出错时窗口也能显示回来
             throw; // Re-throw so the caller knows about the error
-        }
-        finally
-        {
-             // 确保窗口最终可见
-             this.Show();
-        }
-    }
+         }
+         // finally // 移除 finally 块中的 this.Show()
+         // {
+         //      // 确保窗口最终可见
+         //      // this.Show(); // <--- 移除此行
+         // }
+     }
 
     private async void StartRegionCapture()
     {
@@ -548,13 +548,13 @@ public partial class MainWindow : Window
             LogToFile($"MainWindow: 区域截图过程出错: {ex}");
             StatusText.Text = "截图失败: " + ex.Message;
             this.Show(); // 确保出错时窗口也能显示回来
-        }
-        finally
-        {
-             // 确保窗口最终可见
-             this.Show();
-        }
-    }
+         }
+         // finally // 移除 finally 块中的 this.Show()
+         // {
+         //      // 确保窗口最终可见
+         //      // this.Show(); // <--- 移除此行
+         // }
+     }
 
     private async Task SaveScreenshot(System.Drawing.Bitmap bitmap) // 改为 async Task
     {
@@ -659,15 +659,15 @@ public partial class MainWindow : Window
 
     private void ShowPreview(System.Drawing.Bitmap bitmap)
     {
-        LogToFile("MainWindow: 显示预览");
+         LogToFile("MainWindow: 显示预览");
 
-        try
-        {
-            // 确保主窗口可见
-            this.IsVisible = true;
+         try
+         {
+             // // 确保主窗口可见 // <--- 移除此行
+             // this.IsVisible = true; // <--- 移除此行
 
-            // 转换为Avalonia位图
-            using (var memoryStream = new MemoryStream())
+             // 转换为Avalonia位图
+             using (var memoryStream = new MemoryStream())
             {
                 bitmap.Save(memoryStream, ImageFormat.Png);
                 memoryStream.Position = 0;
@@ -725,11 +725,15 @@ public partial class MainWindow : Window
             LogToFile("MainWindow: 获取窗口句柄失败，无法注册热键");
             Console.WriteLine("Error: Could not get window handle to register hotkey.");
             StatusText.Text = "无法注册热键";
-            return;
-        }
-        var handle = platformHandle.Handle;
-        bool fsSuccess = false;
-        bool regionSuccess = false;
+             LogToFile("MainWindow: 获取窗口句柄失败，将尝试注册全局热键 (hWnd=IntPtr.Zero)");
+             // StatusText.Text = "无法注册窗口热键，尝试全局注册"; // Optional status update
+             // return; // Don't return, try global registration
+         }
+         // var handle = platformHandle?.Handle ?? IntPtr.Zero; // Use IntPtr.Zero for global hotkeys
+         var handle = IntPtr.Zero; // Explicitly use IntPtr.Zero for global hotkeys
+         LogToFile($"MainWindow: 使用句柄 {handle} 注册热键 (IntPtr.Zero 表示全局)");
+         bool fsSuccess = false;
+         bool regionSuccess = false;
 
         // --- Register FullScreen Hotkey ---
         LogToFile($"MainWindow: 尝试注册全屏热键 {_config.FullScreenHotkeyString}");
@@ -784,20 +788,24 @@ public partial class MainWindow : Window
 
     private void UnregisterHotKeys() // Renamed to plural
     {
-        LogToFile("MainWindow: 尝试注销热键");
-        var platformImpl = this.PlatformImpl;
-        if (platformImpl != null && platformImpl.TryGetFeature<IPlatformHandle>(out var platformHandle) && platformHandle.Handle != IntPtr.Zero)
-        {
-            NativeMethods.UnregisterHotKey(platformHandle.Handle, HOTKEY_ID_FULLSCREEN);
-            NativeMethods.UnregisterHotKey(platformHandle.Handle, HOTKEY_ID_REGION);
-            LogToFile("MainWindow: 热键已注销");
-            Console.WriteLine("Hotkeys unregistered.");
-        }
-        else
-        {
-             LogToFile("MainWindow: 获取窗口句柄失败，无法注销热键");
-        }
-    }
+         LogToFile("MainWindow: 尝试注销全局热键 (hWnd=IntPtr.Zero)");
+         // var platformImpl = this.PlatformImpl;
+         // IntPtr handle = IntPtr.Zero;
+         // if (platformImpl != null && platformImpl.TryGetFeature<IPlatformHandle>(out var platformHandle) && platformHandle.Handle != IntPtr.Zero)
+         // {
+         //     handle = platformHandle.Handle; // Keep handle if needed for window-specific unregister, but we registered globally
+         // }
+         // else
+         // {
+         //      LogToFile("MainWindow: 获取窗口句柄失败，但仍尝试注销全局热键");
+         // }
+
+         // Always try to unregister with IntPtr.Zero as we registered with it
+         NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_FULLSCREEN);
+         NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_REGION);
+         LogToFile("MainWindow: 全局热键已尝试注销");
+         Console.WriteLine("Global hotkeys unregistered.");
+     }
 
     private void SetFullScreenHotkeyButton_Click(object sender, RoutedEventArgs e)
     {
