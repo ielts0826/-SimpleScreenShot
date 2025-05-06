@@ -487,16 +487,34 @@ public partial class MainWindow : Window
 
                 if (result != null)
                 {
-                    LogToFile($"MainWindow: 保存截图到: {result}");
-                    finalSavePath = result;
-                    ImageFormat format = ImageFormat.Png; // Default
-                    // ... (format selection logic) ...
-                    if (result.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || result.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)) format = ImageFormat.Jpeg;
-                    else if (result.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)) format = ImageFormat.Bmp;
+                     LogToFile($"MainWindow: 用户选择保存路径: {result}");
 
-                    bitmap.Save(result, format);
-                    ShowPreview(bitmap);
-                    Dispatcher.UIThread.Post(() => StatusText.Text = "截图已保存到: " + result);
+                     // --- Ensure PNG format and extension ---
+                     string correctedPath = result;
+                     // Check if the path already has an extension, remove it if it's not png, or add .png if none exists.
+                     string? currentExtension = System.IO.Path.GetExtension(correctedPath);
+                     if (string.IsNullOrEmpty(currentExtension))
+                     {
+                         // No extension, add .png
+                         correctedPath += ".png";
+                         LogToFile($"MainWindow: 文件名无扩展名，添加 .png -> {correctedPath}");
+                     }
+                     else if (!currentExtension.Equals(".png", StringComparison.OrdinalIgnoreCase))
+                     {
+                         // Incorrect extension, replace with .png
+                         correctedPath = System.IO.Path.ChangeExtension(correctedPath, ".png");
+                         LogToFile($"MainWindow: 文件名扩展名非png ({currentExtension})，更改为 .png -> {correctedPath}");
+                     }
+                     // If it already ends with .png (case-insensitive), do nothing.
+
+                     finalSavePath = correctedPath;
+                     ImageFormat format = ImageFormat.Png; // Always save as PNG
+                     LogToFile($"MainWindow: 最终保存路径: {finalSavePath}, 格式: {format}");
+                     // --- End Ensure PNG ---
+
+                     bitmap.Save(finalSavePath, format); // Use corrected path and PNG format
+                     ShowPreview(bitmap);
+                     Dispatcher.UIThread.Post(() => StatusText.Text = "截图已保存到: " + finalSavePath); // Show corrected path
                 }
                 else
                 {

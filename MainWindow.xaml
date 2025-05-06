@@ -4,12 +4,16 @@
         x:Class="ScreenCaptureTool.MainWindow"
         Title="简易截图"
         Width="450" 
-        Height="400"
-        WindowStartupLocation="CenterScreen"
-        Icon="/Assets/screenshot_icon.ico"
-        CornerRadius="8" 
-        >
-        <!-- Window Size Further Increased -->
+        Height="470"
+         WindowStartupLocation="CenterScreen"
+          Icon="/Assets/screenshot_icon.ico"
+           CornerRadius="8"
+           TransparencyLevelHint="AcrylicBlur" 
+           Background="{x:Null}"
+           ExtendClientAreaToDecorationsHint="True" 
+           > 
+           <!-- Removed invalid comments from inside the tag -->
+          <!-- Window Size Further Increased -->
         <!-- Added Window CornerRadius -->
         <!-- Example icon namespace: xmlns:icons="clr-namespace:Avalonia.Media.Imaging;assembly=Avalonia.Media" -->
 
@@ -22,44 +26,91 @@
             <Setter Property="MinWidth" Value="120"/> <!-- Adjusted MinWidth -->
             <Setter Property="Height" Value="36"/> <!-- Added explicit Height -->
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <!-- <Setter Property="VerticalContentAlignment" Value="Center"/> Let default handle -->
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <!-- Style for Secondary Buttons (e.g., Set, Browse) -->
+              <!-- <Setter Property="VerticalContentAlignment" Value="Center"/> Let default handle -->
+              <Setter Property="Cursor" Value="Hand"/>
+              <Setter Property="Background" Value="#44555555"/> <!-- Made slightly more transparent -->
+              <Setter Property="Foreground" Value="White"/>
+              <Setter Property="BorderThickness" Value="0"/> <!-- Remove border -->
+          </Style>
+         <!-- Style for Secondary Buttons (e.g., Set, Browse) -->
         <Style Selector="Button.secondary">
             <Setter Property="MinWidth" Value="60"/> 
             <Setter Property="Height" Value="32"/> <!-- Explicit height for secondary buttons -->
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="FontSize" Value="12"/>
-             <!-- Consider using a less prominent background or border -->
-             <!-- <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabledBrush}"/> -->
-        </Style>
-         <Style Selector="TextBox">
-            <Setter Property="CornerRadius" Value="6"/> <!-- Match button rounding -->
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="TextBlock.Status">
-            <Setter Property="Margin" Value="0,10,0,0"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}"/> <!-- Use theme resource for subtle color -->
-            <Setter Property="FontSize" Value="12"/> <!-- Slightly smaller status text -->
-        </Style>
-    </Window.Styles>
+               <!-- Consider using a less prominent background or border -->
+               <!-- <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabledBrush}"/> -->
+              <Setter Property="Background" Value="#33444444"/> <!-- Made even more transparent -->
+              <Setter Property="Foreground" Value="#DDDDDD"/> <!-- Lighter gray text -->
+          </Style>
+           <Style Selector="TextBox">
+             <Setter Property="CornerRadius" Value="6"/> <!-- Match button rounding -->
+             <Setter Property="Padding" Value="8,6"/>
+              <Setter Property="VerticalContentAlignment" Value="Center"/>
+              <Setter Property="Background" Value="#44555555"/> <!-- Made slightly more transparent -->
+              <Setter Property="Foreground" Value="White"/>
+               <Setter Property="CaretBrush" Value="White"/>
+              <Setter Property="BorderThickness" Value="0"/>
+              <!-- <Setter Property="WatermarkForeground" Value="#AAAAAA"/> Removed: Property does not exist -->
+          </Style>
+          <Style Selector="TextBlock.Status">
+             <Setter Property="Margin" Value="0,10,0,0"/>
+             <Setter Property="HorizontalAlignment" Value="Center"/>
+             <Setter Property="Foreground" Value="#BBBBBB"/> <!-- Lighter gray for status -->
+              <Setter Property="FontSize" Value="12"/> <!-- Slightly smaller status text -->
+          </Style>
+          <!-- Style for the Borders wrapping settings -->
+          <Style Selector="Border">
+              <Setter Property="Background" Value="#22333333"/> <!-- Made even more transparent -->
+              <Setter Property="CornerRadius" Value="8"/>
+              <Setter Property="Padding" Value="15,10"/>
+         </Style>
+         <!-- Style for general TextBlocks (like labels) -->
+         <Style Selector="TextBlock">
+             <Setter Property="Foreground" Value="#DDDDDD"/> <!-- Default text to light gray -->
+             <Setter Property="VerticalAlignment" Value="Center"/>
+         </Style>
+         <!-- Style for the Title TextBlock -->
+         <Style Selector="TextBlock#TitleText"> <!-- Apply this style by adding x:Name="TitleText" to the title TextBlock -->
+              <Setter Property="Foreground" Value="White"/>
+              <Setter Property="FontSize" Value="16"/>
+              <Setter Property="FontWeight" Value="SemiBold"/>
+              <Setter Property="HorizontalAlignment" Value="Center"/>
+              <Setter Property="Margin" Value="0,15,0,20"/> <!-- Add top margin for custom title bar area -->
+         </Style>
+          <!-- Style for CheckBox -->
+          <Style Selector="CheckBox">
+              <Setter Property="Foreground" Value="#DDDDDD"/>
+          </Style>
+     </Window.Styles>
 
-    <Grid Margin="20"> <!-- Increase overall margin -->
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="*"/> <!-- Buttons -->
-            <RowDefinition Height="Auto"/> <!-- Hotkey Settings -->
-            <RowDefinition Height="Auto"/> <!-- Default Path Settings -->
-            <RowDefinition Height="5"/>  <!-- Spacer -->
-            <RowDefinition Height="Auto"/> <!-- Status Text -->
-        </Grid.RowDefinitions>
+     <Grid Margin="0"> <!-- Remove Grid margin to allow Border to span full width -->
+         <Grid.RowDefinitions>
+             <RowDefinition Height="Auto"/> <!-- Custom Title Bar Area -->
+             <RowDefinition Height="*"/> <!-- Main Content Area -->
+          </Grid.RowDefinitions>
 
-        <TextBlock Text="简易截图" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Grid.Row="0" Margin="0,5,0,20"/> <!-- Adjust title style and margin -->
+          <!-- Custom Title Bar Background -->
+          <Border Grid.Row="0" Height="32" VerticalAlignment="Top" Background="#AA222222" IsHitTestVisible="False">
+              <!-- IsHitTestVisible=False allows clicks to pass through to system buttons if needed -->
+              <!-- You might need to adjust the Height (e.g., 30, 32) based on the actual title bar height -->
+              <!-- You can adjust the Background color and opacity (#AA alpha) -->
+          </Border>
 
-        <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="15"> 
+          <!-- Main Content Grid -->
+          <Grid Grid.Row="1" Margin="20"> <!-- Add margin back to the main content -->
+             <Grid.RowDefinitions>
+                 <RowDefinition Height="Auto"/> <!-- Title Text (moved here) -->
+                 <RowDefinition Height="*"/> <!-- Buttons -->
+                 <RowDefinition Height="Auto"/> <!-- Hotkey Settings -->
+                 <RowDefinition Height="Auto"/> <!-- Default Path Settings -->
+                 <RowDefinition Height="5"/>  <!-- Spacer -->
+                 <RowDefinition Height="Auto"/> <!-- Status Text -->
+             </Grid.RowDefinitions>
+
+             <TextBlock x:Name="TitleText" Text="简易截图" Grid.Row="0"/> <!-- Apply TitleText style via x:Name -->
+
+         <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="15"> 
              <!-- Consider adding icons to buttons later -->
             <Button Name="FullScreenButton" Content="全屏截图" Click="FullScreenButton_Click"/>
             <Button Name="RegionButton" Content="区域截图" Click="RegionButton_Click"/>
@@ -121,6 +172,7 @@
                Stretch="Uniform"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"
-               IsVisible="False"/> -->
-    </Grid>
-</Window>
+                IsVisible="False"/> -->
+     </Grid> <!-- This is the end tag for the Main Content Grid -->
+ </Grid> <!-- Add the missing end tag for the Root Grid -->
+ </Window>
