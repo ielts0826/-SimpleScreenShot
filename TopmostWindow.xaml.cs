@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input; // Add for PointerEventArgs
 using Avalonia.Interactivity;
 using Avalonia.Media; // Add for Transforms
@@ -11,6 +12,9 @@ using Avalonia.Markup.Xaml; // Required for AvaloniaXamlLoader
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Net.Http; // Added for HttpClient
+using System.Net.Http.Headers; // Added for MediaTypeWithQualityHeaderValue
+using System.Text.Json; // Added for JsonSerializer
 
 namespace ScreenCaptureTool;
 
@@ -19,6 +23,7 @@ public partial class TopmostWindow : Window
     private readonly AvaloniaBitmap? _bitmap; // Make nullable
     private Avalonia.Controls.Image PreviewImage => this.FindControl<Avalonia.Controls.Image>("PreviewImage");
     private Panel ImageContainer => this.FindControl<Panel>("ImageContainer"); // Get reference to the Panel
+    private Button UploadButton => this.FindControl<Button>("UploadButton"); // Get reference to UploadButton
 
     // Zoom and Pan state
     private Point _panStartPoint;
@@ -112,6 +117,104 @@ public partial class TopmostWindow : Window
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private async void UploadButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_bitmap == null)
+        {
+            Console.WriteLine("TopmostWindow: No bitmap to upload.");
+            // Optionally show a message to the user in the preview window or a dialog
+            return;
+        }
+
+        if (UploadButton != null) UploadButton.IsEnabled = false;
+        // TODO: Add a status indicator in the TopmostWindow UI if possible, e.g., a TextBlock
+        MainWindow.LogToFile("TopmostWindow: UploadButton clicked.");
+        // Temporarily log to main window's status bar if accessible, or implement local status
+        MainWindow? mw = null;
+        if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            mw = desktop.MainWindow as MainWindow;
+        }
+
+        if (mw == null)
+        {
+            MainWindow.LogToFile("TopmostWindow: Cannot access MainWindow instance.");
+            // Show local error maybe?
+            if (UploadButton != null) UploadButton.IsEnabled = true;
+            return;
+        }
+
+        // Check if Imgur Client ID is configured
+        string? clientId = mw.GetConfig().ImgurClientId;
+        if (string.IsNullOrWhiteSpace(clientId) || clientId == "YOUR_IMGUR_CLIENT_ID_PLACEHOLDER")
+        {
+            MainWindow.LogToFile("TopmostWindow: Imgur Client ID is not configured or is invalid.");
+            mw.SetStatus("请先在主窗口设置有效的 Imgur Client ID");
+            if (UploadButton != null) UploadButton.IsEnabled = true; // Re-enable button
+            // Maybe show a dialog? MessageBox.Avalonia can be used for simple dialogs if added.
+            return;
+        }
+        
+        mw.SetStatus("正在上传到 Imgur...");
+
+        try
+        {
+            // Convert AvaloniaBitmap to System.Drawing.Bitmap then to byte array for uploading
+            // This is a bit convoluted. If ImgurUploader can take AvaloniaBitmap directly or a stream, it's better.
+            // For now, let's assume ImgurUploader needs a byte array or System.Drawing.Bitmap.
+            
+            byte[] imageBytes;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                // Avalonia's Bitmap.Save expects a stream. We'll save it as PNG into a memory stream.
+                _bitmap.Save(ms); 
+                imageBytes = ms.ToArray();
+            }
+
+            string? imageUrl = await ImgurUploader.UploadImageAsync(imageBytes, clientId); // Pass the retrieved Client ID
+
+            if (!string.IsNullOrEmpty(imageUrl))
+            {
+                MainWindow.LogToFile($"TopmostWindow: Image uploaded to Imgur: {imageUrl}");
+                if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopSuccess && desktopSuccess.MainWindow is MainWindow mwSuccess)
+                {
+                    mwSuccess.SetStatus("上传成功! 链接已复制.");
+                }
+                // Copy to clipboard
+                if (Clipboard != null)
+                {
+                    await Clipboard.SetTextAsync(imageUrl);
+                }
+                else
+                {
+                    MainWindow.LogToFile("TopmostWindow: Clipboard service not available.");
+                }
+                // Optionally close the preview window after successful upload
+                // Close(); 
+            }
+            else
+            {
+                MainWindow.LogToFile("TopmostWindow: Imgur upload failed. No URL returned.");
+                if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopFail && desktopFail.MainWindow is MainWindow mwFail)
+                {
+                    mwFail.SetStatus("Imgur 上传失败.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MainWindow.LogToFile($"TopmostWindow: Imgur upload exception: {ex.Message}");
+            if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopEx && desktopEx.MainWindow is MainWindow mwEx)
+            {
+                mwEx.SetStatus("上传出错: " + ex.Message.Split('\n')[0]); // Show first line of error
+            }
+        }
+        finally
+        {
+            if (UploadButton != null) UploadButton.IsEnabled = true;
+        }
     }
 
     // --- Zoom Logic ---

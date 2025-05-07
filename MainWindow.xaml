@@ -3,8 +3,8 @@
         xmlns:icons="clr-namespace:Avalonia.Media.Imaging;assembly=Avalonia.Media" 
         x:Class="ScreenCaptureTool.MainWindow"
         Title="简易截图"
-        Width="450" 
-        Height="470"
+        Width="460" 
+        Height="540"
          WindowStartupLocation="CenterScreen"
           Icon="/Assets/screenshot_icon.ico"
            CornerRadius="8"
@@ -76,7 +76,7 @@
               <Setter Property="FontSize" Value="16"/>
               <Setter Property="FontWeight" Value="SemiBold"/>
               <Setter Property="HorizontalAlignment" Value="Center"/>
-              <Setter Property="Margin" Value="0,15,0,20"/> <!-- Add top margin for custom title bar area -->
+              <Setter Property="Margin" Value="0,15,0,10"/> <!-- Add top margin for custom title bar area, reduced bottom margin -->
          </Style>
           <!-- Style for CheckBox -->
           <Style Selector="CheckBox">
@@ -101,7 +101,8 @@
           <Grid Grid.Row="1" Margin="20"> <!-- Add margin back to the main content -->
              <Grid.RowDefinitions>
                  <RowDefinition Height="Auto"/> <!-- Title Text (moved here) -->
-                 <RowDefinition Height="*"/> <!-- Buttons -->
+                 <RowDefinition Height="Auto"/> <!-- Settings Button Row -->
+                 <RowDefinition Height="*"/> <!-- Main Action Buttons -->
                  <RowDefinition Height="Auto"/> <!-- Hotkey Settings -->
                  <RowDefinition Height="Auto"/> <!-- Default Path Settings -->
                  <RowDefinition Height="5"/>  <!-- Spacer -->
@@ -110,14 +111,28 @@
 
              <TextBlock x:Name="TitleText" Text="简易截图" Grid.Row="0"/> <!-- Apply TitleText style via x:Name -->
 
-         <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="15"> 
+            <!-- Settings Button - Moved to its own row above main action buttons -->
+            <Button Name="SettingsButton" 
+                    Content="设置中心" 
+                    Classes="secondary" 
+                    Grid.Row="1" 
+                    HorizontalAlignment="Left" 
+                    VerticalAlignment="Center" 
+                    MinWidth="90" 
+                    Padding="10,6" 
+                    Click="SettingsButton_Click" 
+                    ToolTip.Tip="打开设置" 
+                    Margin="300,0,0,10"/>
+
+         <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="15" Margin="0,10,0,0"> 
              <!-- Consider adding icons to buttons later -->
             <Button Name="FullScreenButton" Content="全屏截图" Click="FullScreenButton_Click"/>
             <Button Name="RegionButton" Content="区域截图" Click="RegionButton_Click"/>
+            <Button Name="RecordGifButton" Content="录制GIF" Click="RecordGifButton_Click"/>
         </StackPanel>
 
         <!-- Hotkey Setting Area - Wrapped in Border -->
-        <Border Grid.Row="2" Margin="0,35,0,0" Padding="15,10" CornerRadius="8" Background="{DynamicResource LayerFillColorDefaultBrush}">
+        <Border Grid.Row="3" Margin="0,20,0,0" Padding="15,10" CornerRadius="8" Background="{DynamicResource LayerFillColorDefaultBrush}"> <!-- Reduced top margin -->
           <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="75"/> <!-- Label - Fixed Width for alignment -->
@@ -127,21 +142,26 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/> <!-- Added row for GIF hotkey -->
             </Grid.RowDefinitions>
 
               <TextBlock Text="全屏热键:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
               <TextBox Name="FullScreenHotkeyTextBox" Grid.Row="0" Grid.Column="1" Width="140" IsReadOnly="True"/>
               <Button Name="SetFullScreenHotkeyButton" Classes="secondary" Grid.Row="0" Grid.Column="2" Content="设置" Click="SetFullScreenHotkeyButton_Click"/>
 
-              <!-- Add top margin to the second row TextBlock for spacing -->
               <TextBlock Text="区域热键:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,10,10,0"/> 
-              <TextBox Name="RegionHotkeyTextBox" Grid.Row="1" Grid.Column="1" Width="140" IsReadOnly="True" Margin="0,5,0,0"/> <!-- Keep margin on TextBox for vertical spacing with label -->
-              <Button Name="SetRegionHotkeyButton" Classes="secondary" Grid.Row="1" Grid.Column="2" Content="设置" Click="SetRegionHotkeyButton_Click"/> <!-- Remove margin from Button -->
+              <TextBox Name="RegionHotkeyTextBox" Grid.Row="1" Grid.Column="1" Width="140" IsReadOnly="True" Margin="0,5,0,0"/>
+              <Button Name="SetRegionHotkeyButton" Classes="secondary" Grid.Row="1" Grid.Column="2" Content="设置" Click="SetRegionHotkeyButton_Click"/>
+
+              <!-- GIF Record Hotkey -->
+              <TextBlock Text="GIF热键:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,10,10,0"/> 
+              <TextBox Name="GifRecordHotkeyTextBox" Grid.Row="2" Grid.Column="1" Width="140" IsReadOnly="True" Margin="0,5,0,0"/>
+              <Button Name="SetGifRecordHotkeyButton" Classes="secondary" Grid.Row="2" Grid.Column="2" Content="设置" Click="SetGifRecordHotkeyButton_Click"/>
           </Grid>
         </Border>
 
         <!-- Default Save Path Setting Area - Wrapped in Border -->
-         <Border Grid.Row="3" Margin="0,15,0,0" Padding="15,10" CornerRadius="8" Background="{DynamicResource LayerFillColorDefaultBrush}">
+         <Border Grid.Row="4" Margin="0,10,0,0" Padding="15,10" CornerRadius="8" Background="{DynamicResource LayerFillColorDefaultBrush}"> <!-- Reduced top margin -->
             <StackPanel>
                 <CheckBox Name="UseDefaultPathCheckBox" Content="启用默认保存路径" Checked="UseDefaultPathCheckBox_Changed" Unchecked="UseDefaultPathCheckBox_Changed" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal">
@@ -152,10 +172,10 @@
          </Border>
 
          <!-- Status Text and Help Button -->
-         <Grid Grid.Row="5" Margin="0,15,0,0">
+         <Grid Grid.Row="6" Margin="0,15,0,5"> <!-- Corrected Grid.Row to 6, Adjusted top and added bottom margin -->
              <Grid.ColumnDefinitions>
                  <ColumnDefinition Width="*"/>
-                 <ColumnDefinition Width="Auto"/>
+                 <ColumnDefinition Width="Auto"/> 
              </Grid.ColumnDefinitions>
               <TextBlock Name="StatusText" Classes="Status" Text="准备就绪" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"/> 
               <Button Name="HelpButton" Content="?" Classes="secondary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="30" Padding="5" Click="HelpButton_Click" ToolTip.Tip="打开帮助说明"/>

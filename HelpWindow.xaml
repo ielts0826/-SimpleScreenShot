@@ -1,56 +1,65 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ScreenCaptureTool.HelpWindow"
-        Title="使用说明"
-        Width="500" Height="450"
+        Title="使用说明 - 简易截图与录制工具"
+        Width="550" Height="600"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
+        CanResize="True"
         Icon="/Assets/screenshot_icon.ico"
         CornerRadius="8">
 
     <Grid Margin="20">
         <ScrollViewer>
             <StackPanel Spacing="15">
-                <TextBlock Text="简易截图 使用说明" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="简易截图与录制工具 - 使用说明" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
 
                 <TextBlock TextWrapping="Wrap">
-                    欢迎使用简易截图工具！本工具提供快速的全屏截图和区域截图功能。
+                    欢迎使用本工具！它提供了快速的全屏截图、区域截图、区域GIF录制以及便捷的分享功能。
                 </TextBlock>
 
-                <TextBlock Text="主要功能:" FontWeight="Bold"/>
+                <TextBlock Text="主要功能:" FontWeight="Bold" Margin="0,10,0,0"/>
                 <TextBlock TextWrapping="Wrap">
-                    - 全屏截图: 点击“全屏截图”按钮或使用对应的快捷键（默认为 Ctrl+Shift+U）截取整个屏幕。
-                    - 区域截图: 点击“区域截图”按钮或使用对应的快捷键（默认为 Ctrl+Shift+A），然后按住鼠标左键拖动选择截图区域，松开鼠标完成截图。在选择过程中按 Esc 键可取消。
+                    - 全屏截图: 点击“全屏截图”按钮或使用对应的全局快捷键（默认为 Ctrl+Shift+U）截取整个屏幕。
+                    - 区域截图: 点击“区域截图”按钮或使用对应的全局快捷键（默认为 Ctrl+Shift+A），然后按住鼠标左键拖动选择截图区域，松开鼠标完成截图。
+                    - GIF录制: 点击“录制GIF”按钮或使用对应的全局快捷键（默认为 Ctrl+Shift+G），选择区域后将开始3秒倒计时，然后进行录制。再次触发快捷键或点击按钮停止录制并保存。
+                    - 在选择区域过程中按 Esc 键可取消当前操作。
                 </TextBlock>
 
-                 <TextBlock Text="快捷键设置:" FontWeight="Bold"/>
-                 <TextBlock TextWrapping="Wrap">
-                    - 在主界面可以分别设置全屏截图和区域截图的快捷键。
-                    - 点击对应功能旁边的“设置”按钮，然后按下您想设置的新快捷键组合（必须包含 Ctrl、Shift 或 Alt 中的至少一个，再加上一个普通按键）。
-                    - 按 Esc 键可以取消设置。
-                    - 注意：由于技术限制，设置的快捷键目前仅在主程序窗口获得焦点时生效。全局热键功能将在后续版本尝试完善。
+                <TextBlock Text="截图预览与分享:" FontWeight="Bold" Margin="0,10,0,0"/>
+                <TextBlock TextWrapping="Wrap">
+                    - 截图完成后会弹出一个预览窗口。
+                    - 预览功能: 支持鼠标滚轮缩放、左键拖动（需先放大）。
+                    - 保存截图: 点击“保存”按钮手动选择保存位置。
+                    - 上传到 Imgur: 点击“上传到 Imgur”按钮可将截图快速上传分享 (需在“设置中心”配置有效的Imgur Client ID)。成功后图片链接会自动复制到剪贴板。
+                    - 关闭预览: 右键单击预览窗口或点击“关闭”按钮。
                 </TextBlock>
 
-                 <TextBlock Text="默认保存路径:" FontWeight="Bold"/>
+                 <TextBlock Text="设置中心:" FontWeight="Bold" Margin="0,10,0,0"/>
                  <TextBlock TextWrapping="Wrap">
-                    - 您可以勾选“启用默认保存路径”并点击“浏览...”选择一个文件夹。
+                    - 点击主界面上方的“设置中心”按钮进入设置界面。
+                    - Imgur Client ID: 在此输入您从 Imgur 获取的 Client ID。这是使用“上传到 Imgur”功能所必需的。如果为空或无效，上传按钮可能不可用或上传失败。
+                    - (未来可能会有更多设置项移至此处)
+                </TextBlock>
+
+                 <TextBlock Text="快捷键设置:" FontWeight="Bold" Margin="0,10,0,0"/>
+                 <TextBlock TextWrapping="Wrap">
+                    - 在主界面，全屏截图、区域截图、GIF录制功能按钮的下方区域，可以分别点击“设置”按钮来更改对应的全局快捷键。
+                    - 按下您想设置的新快捷键组合（必须包含 Ctrl、Shift 或 Alt 中的至少一个，再加上一个普通按键）。
+                    - 按 Esc 键可以取消当前的快捷键设置过程。
+                    - 设置的快捷键全局生效，即使程序窗口未激活或最小化也能响应。
+                </TextBlock>
+
+                 <TextBlock Text="默认保存路径 (截图):" FontWeight="Bold" Margin="0,10,0,0"/>
+                 <TextBlock TextWrapping="Wrap">
+                    - 在主界面勾选“启用默认保存路径”并点击“浏览...”选择一个文件夹。
                     - 启用后，所有截图将自动保存到该文件夹，文件名从 1.png 开始递增，不再弹出“另存为”对话框。
                     - 如果不勾选此选项，每次截图后会弹出“另存为”对话框。
                 </TextBlock>
                 
-                <TextBlock Text="截图预览:" FontWeight="Bold"/>
-                <TextBlock TextWrapping="Wrap">
-                    - 截图完成后会弹出一个预览窗口。
-                    - 在预览窗口中，您可以使用鼠标滚轮放大图片（不能缩小到原图以下）。
-                    - 按住鼠标左键可以拖动已放大的图片。
-                    - 点击预览窗口的“保存”按钮可以再次选择保存位置（即使设置了默认路径）。
-                    - 点击“关闭”按钮或直接关闭窗口会结束预览。
-                </TextBlock>
-
                 <TextBlock Text="联系方式:" FontWeight="Bold" Margin="0,15,0,0"/>
                 <TextBlock Text="lishengwei0826@gmail.com"/>
 
-                <Button Content="关闭" HorizontalAlignment="Center" Margin="0,20,0,0" Click="CloseButton_Click"/>
+                <Button Content="关闭" HorizontalAlignment="Center" Margin="0,20,0,0" Click="CloseButton_Click" IsDefault="True" MinWidth="100"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

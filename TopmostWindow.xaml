@@ -8,6 +8,26 @@
         SystemDecorations="Full" 
         Background="Gray" 
         Topmost="True">
+    <Window.Styles>
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="MinWidth" Value="100"/> 
+            <Setter Property="Height" Value="32"/> 
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#CC555555"/> <!-- Slightly less transparent than main window for better visibility on varied backgrounds -->
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#AA777777"/>
+        </Style>
+        <Style Selector="Button:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#88666666"/>
+        </Style>
+    </Window.Styles>
     <Grid>
         <Panel Name="ImageContainer" ClipToBounds="True" Background="Transparent" 
                PointerWheelChanged="ImageContainer_PointerWheelChanged" 
@@ -19,18 +39,15 @@
                    RenderTransformOrigin="0.5,0.5"/> 
         </Panel>
 
-        <Button Content="保存"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom" 
-                Margin="10"
-                Padding="10,5"
-                Click="SaveButton_Click"/>
-        
-        <Button Content="关闭"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom" 
-                Margin="10,10,80,10" 
-                Padding="10,5"
-                Click="CloseButton_Click"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="5">
+            <Button Name="SaveButton" Content="保存"
+                    Click="SaveButton_Click"/>
+            
+            <Button Name="UploadButton" Content="上传到 Imgur" 
+                    Click="UploadButton_Click"/>
+
+            <Button Name="CloseButton" Content="关闭"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
     </Grid>
 </Window>

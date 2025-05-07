@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ScreenCaptureTool.SettingsWindow"
+        Title="设置"
+        Width="400" Height="320"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Icon="/Assets/screenshot_icon.ico"
+        SystemDecorations="BorderOnly"
+        Background="#2E2E2E">
+
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="#DDDDDD"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox">
+             <Setter Property="CornerRadius" Value="6"/>
+             <Setter Property="Padding" Value="8,6"/>
+              <Setter Property="VerticalContentAlignment" Value="Center"/>
+              <Setter Property="Background" Value="#44555555"/>
+              <Setter Property="Foreground" Value="White"/>
+               <Setter Property="CaretBrush" Value="White"/>
+              <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+         <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="MinWidth" Value="80"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#55666666"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+          </Style>
+          <Style Selector="Button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#77888888"/>
+        </Style>
+        <Style Selector="Button:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#99777777"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Padding="20">
+        <StackPanel Spacing="15">
+            <TextBlock Text="Imgur API 设置" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            
+            <TextBlock Text="匿名上传需要 Client ID。您可以从 Imgur 网站注册您的应用以获取。" TextWrapping="Wrap" FontSize="11" Foreground="#BBBBBB"/>
+            
+            <TextBlock Text="Imgur Client ID:" Margin="0,5,0,0"/>
+            <TextBox Name="ImgurClientIdTextBox" Watermark="在此输入您的 Imgur Client ID"/>
+            <TextBlock Name="ImgurClientIdStatusText" FontSize="11" TextWrapping="Wrap" MinHeight="30"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <Button Name="OkButton" Content="确定" Click="OkButton_Click" IsDefault="True"/>
+                <Button Name="CancelButton" Content="取消" Click="CancelButton_Click" IsCancel="True"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window> 

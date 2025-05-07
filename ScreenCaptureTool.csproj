@@ -24,6 +24,7 @@
      </PackageReference>
      <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
      <PackageReference Include="System.Reactive" Version="6.0.1" /> <!-- Or latest stable version -->
+     <PackageReference Include="AnimatedGif" Version="1.0.5" />
    </ItemGroup>
    
   <!-- 确保所有XAML和Assets文件都被包含为AvaloniaResource -->

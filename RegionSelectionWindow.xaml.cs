@@ -21,12 +21,22 @@ namespace ScreenCaptureTool
         public Rect? SelectedRegion { get; private set; } = null;
 
         // Constructor accepting the background bitmap
-        public RegionSelectionWindow(Bitmap background)
+        public RegionSelectionWindow(Bitmap background, string? title = null)
         {
             InitializeComponent();
 #if DEBUG
             this.AttachDevTools();
 #endif
+            if (!string.IsNullOrEmpty(title))
+            {
+                this.Title = title;
+            }
+            else
+            {
+                // Default title if none provided, or keep the one from XAML
+                // this.Title = "选择区域"; // Example default
+            }
+
             _backgroundImage = this.FindControl<Image>("BackgroundImage")!;
             _selectionCanvas = this.FindControl<Canvas>("SelectionCanvas")!;
 

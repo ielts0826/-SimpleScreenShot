@@ -22,11 +22,12 @@ using System.ComponentModel; // For TypeConverter
 using System.Collections.Generic; // For List
 using Avalonia.Platform.Storage; // For FolderPicker
 using System.Reactive.Disposables; // For Disposable.Create
+using AnimatedGif;
 
 namespace ScreenCaptureTool;
 
 // Enum to track which hotkey is being set
-internal enum HotkeySettingMode { None, FullScreen, Region }
+internal enum HotkeySettingMode { None, FullScreen, Region, GifRecord }
 
 public partial class MainWindow : Window
 {
@@ -43,9 +44,20 @@ public partial class MainWindow : Window
     private readonly string _configPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ScreenCaptureTool", "config.json"); // Use System.IO.Path
     private Config _config = new(); // Initialize with default config
 
+    // GIF Recording State
+    private bool _isRecording = false;
+    private System.Threading.Timer? _recordingTimer; // Nullable
+    private List<System.Drawing.Bitmap> _gifFrames = new List<System.Drawing.Bitmap>();
+    private int _framesPerSecond = 10; // Default FPS
+    private Button RecordGifButton => this.FindControl<Button>("RecordGifButton")!;
+    private Button FullScreenButton => this.FindControl<Button>("FullScreenButton")!;
+    private Button RegionButton => this.FindControl<Button>("RegionButton")!;
+    private Rect? _gifRecordingRegion = null; // To store the selected region for GIF recording
+
     // Hotkey registration disposables
     private IDisposable? _fullscreenHotkeyRegistration;
     private IDisposable? _regionHotkeyRegistration;
+    private IDisposable? _gifRecordHotkeyRegistration; // Added for GIF Record hotkey
 
     // Controls (Removed Overlay related)
     private TextBlock StatusText => this.FindControl<TextBlock>("StatusText")!;
@@ -56,6 +68,12 @@ public partial class MainWindow : Window
     private CheckBox UseDefaultPathCheckBox => this.FindControl<CheckBox>("UseDefaultPathCheckBox")!;
     private TextBox DefaultPathTextBox => this.FindControl<TextBox>("DefaultPathTextBox")!;
     private Button BrowseDefaultPathButton => this.FindControl<Button>("BrowseDefaultPathButton")!;
+    // New controls for GIF Record Hotkey
+    private TextBox GifRecordHotkeyTextBox => this.FindControl<TextBox>("GifRecordHotkeyTextBox")!;
+    private Button SetGifRecordHotkeyButton => this.FindControl<Button>("SetGifRecordHotkeyButton")!;
+    // Controls for Imgur Client ID settings are now in SettingsWindow.xaml.cs
+    // private TextBox ImgurClientIdTextBox => this.FindControl<TextBox>("ImgurClientIdTextBox")!;
+    // private TextBlock ImgurClientIdStatusText => this.FindControl<TextBlock>("ImgurClientIdStatusText")!;
 
     // Selection rectangle is now inside RegionSelectionWindow
     // private Avalonia.Controls.Shapes.Rectangle _selectionRectangle = ...;
@@ -113,7 +131,7 @@ public partial class MainWindow : Window
                  _config = JsonSerializer.Deserialize<Config>(json) ?? new Config();
                  // Parse loaded strings to update Modifiers and VKCode
                  _config.UpdateModifiersAndVKCodeFromStrings();
-                 LogToFile($"配置加载完成: FullScreen={_config.FullScreenHotkeyString}, Region={_config.RegionHotkeyString}, UseDefaultPath={_config.UseDefaultSavePath}, DefaultPath={_config.DefaultSavePath}, NextNum={_config.NextSaveFileNumber}");
+                 LogToFile($"配置加载完成: FullScreen={_config.FullScreenHotkeyString}, Region={_config.RegionHotkeyString}, GifRecord={_config.GifRecordHotkeyString}, UseDefaultPath={_config.UseDefaultSavePath}, DefaultPath={_config.DefaultSavePath}, NextNum={_config.NextSaveFileNumber}, ImgurClientId={_config.ImgurClientId?.Substring(0, Math.Min(_config.ImgurClientId.Length, 5))}..."); // Log partial ClientID for privacy
             }
             else
             {
@@ -156,6 +174,7 @@ public partial class MainWindow : Window
     {
         UpdateHotkeyDisplay();
         UpdateDefaultPathDisplay();
+        // UpdateImgurSettingsDisplay(); // Removed, Imgur settings are in a separate window
     }
 
     private void UpdateHotkeyDisplay()
@@ -169,6 +188,11 @@ public partial class MainWindow : Window
          {
               RegionHotkeyTextBox.Text = _config.RegionHotkeyString;
               LogToFile($"更新区域热键显示: {RegionHotkeyTextBox.Text}");
+         }
+         if (GifRecordHotkeyTextBox != null) // Added for GIF Record Hotkey
+         {
+            GifRecordHotkeyTextBox.Text = _config.GifRecordHotkeyString;
+            LogToFile($"更新GIF录制热键显示: {GifRecordHotkeyTextBox.Text}");
          }
          if (StatusText != null && _settingHotkeyMode == HotkeySettingMode.None)
          {
@@ -579,12 +603,16 @@ public partial class MainWindow : Window
      {
          _fullscreenHotkeyRegistration?.Dispose();
          _regionHotkeyRegistration?.Dispose();
+         _gifRecordHotkeyRegistration?.Dispose(); // Unregister GIF Record hotkey
          _fullscreenHotkeyRegistration = null;
          _regionHotkeyRegistration = null;
+         _gifRecordHotkeyRegistration = null; // Set to null
          bool fsSuccess = false;
          bool regionSuccess = false;
+         bool gifSuccess = false; // Added for GIF Record hotkey
          string fsError = string.Empty;
          string regionError = string.Empty;
+         string gifError = string.Empty; // Added for GIF Record hotkey
 
          try
          {
@@ -615,13 +643,35 @@ public partial class MainWindow : Window
                  catch (Exception ex) { /* ... error handling ... */ regionError = $"区域热键注册失败: {ex.Message}"; LogToFile($"MainWindow: {regionError}"); Console.WriteLine($"Error registering global region hotkey: {ex}"); }
              }
              else { /* ... error handling ... */ regionError = "区域热键配置无效"; LogToFile($"MainWindow: {regionError} ({_config.RegionHotkeyString})"); }
+
+            // Register GIF Record Hotkey
+            LogToFile($"MainWindow: 尝试使用 User32Hotkey 注册GIF录制热键 {_config.GifRecordHotkeyString}");
+            KeyGesture? gifGesture = KeyGestureConverter.StringToKeyGesture(_config.GifRecordHotkeyString);
+            if (gifGesture != null && gifGesture.Key != Key.None && gifGesture.KeyModifiers != KeyModifiers.None)
+            {
+                try
+                {
+                    _gifRecordHotkeyRegistration = User32Hotkey.Create(gifGesture.Key, gifGesture.KeyModifiers, TriggerGifRecord);
+                    LogToFile($"MainWindow: 全局GIF录制热键 {_config.GifRecordHotkeyString} 注册成功");
+                    gifSuccess = true;
+                }
+                catch (Exception ex) { gifError = $"GIF录制热键注册失败: {ex.Message}"; LogToFile($"MainWindow: {gifError}"); Console.WriteLine($"Error registering global GIF record hotkey: {ex}"); }
+            }
+            else { gifError = "GIF录制热键配置无效"; LogToFile($"MainWindow: {gifError} ({_config.GifRecordHotkeyString})"); }
          }
          catch (Exception ex) { /* ... error handling ... */ LogToFile($"MainWindow: InitializeHotKeys 内部发生意外错误: {ex}"); StatusText.Text = "热键初始化时出错"; return; }
 
-         if (fsSuccess && regionSuccess) UpdateStatusTextWithHotkeys();
-         else if (fsSuccess) StatusText.Text = $"全屏: {_config.FullScreenHotkeyString} (区域注册失败: {regionError})"; // Show specific error
-         else if (regionSuccess) StatusText.Text = $"区域: {_config.RegionHotkeyString} (全屏注册失败: {fsError})"; // Show specific error
-         else StatusText.Text = $"热键注册失败: {fsError} {regionError}".Trim(); // Show combined errors
+         if (fsSuccess && regionSuccess && gifSuccess) UpdateStatusTextWithHotkeys();
+         else 
+         {
+            var errors = new List<string>();
+            if (!fsSuccess) errors.Add($"全屏: {fsError}");
+            if (!regionSuccess) errors.Add($"区域: {regionError}");
+            if (!gifSuccess) errors.Add($"GIF: {gifError}");
+            StatusText.Text = "热键注册部分失败: " + string.Join("; ", errors);
+            // Fallback to show some info even if all fail
+            if (!fsSuccess && !regionSuccess && !gifSuccess) UpdateStatusTextWithHotkeys(); 
+         }
       }
 
      private void UnregisterHotKeys()
@@ -629,23 +679,33 @@ public partial class MainWindow : Window
          LogToFile("MainWindow: 注销全局热键...");
          _fullscreenHotkeyRegistration?.Dispose();
          _regionHotkeyRegistration?.Dispose();
+         _gifRecordHotkeyRegistration?.Dispose(); // Unregister GIF Record hotkey
          _fullscreenHotkeyRegistration = null;
          _regionHotkeyRegistration = null;
+         _gifRecordHotkeyRegistration = null; // Set to null
          LogToFile("MainWindow: 全局热键已注销 (通过 Dispose)");
      }
 
      private void SetFullScreenHotkeyButton_Click(object sender, RoutedEventArgs e) => StartSettingHotkey(HotkeySettingMode.FullScreen);
      private void SetRegionHotkeyButton_Click(object sender, RoutedEventArgs e) => StartSettingHotkey(HotkeySettingMode.Region);
+     private void SetGifRecordHotkeyButton_Click(object sender, RoutedEventArgs e) => StartSettingHotkey(HotkeySettingMode.GifRecord); // Added for GIF Record
 
     private void StartSettingHotkey(HotkeySettingMode mode)
     {
         // ... (StartSettingHotkey logic remains the same) ...
-        string type = mode == HotkeySettingMode.FullScreen ? "全屏" : "区域";
+        string type = "未知";
+        switch(mode)
+        {
+            case HotkeySettingMode.FullScreen: type = "全屏"; break;
+            case HotkeySettingMode.Region: type = "区域"; break;
+            case HotkeySettingMode.GifRecord: type = "GIF录制"; break;
+        }
         LogToFile($"MainWindow: 设置 {type} 热键按钮点击");
         StatusText.Text = $"请按下新的 {type} 快捷键组合 (或按 Esc 取消)...";
         _settingHotkeyMode = mode;
         SetFullScreenHotkeyButton.IsEnabled = false;
         SetRegionHotkeyButton.IsEnabled = false;
+        SetGifRecordHotkeyButton.IsEnabled = false; // Disable GIF button too
         this.Focus();
         LogToFile("MainWindow: 进入热键设置模式，等待按键...");
     }
@@ -675,11 +735,12 @@ public partial class MainWindow : Window
                     UnregisterHotKeys();
                     if (_settingHotkeyMode == HotkeySettingMode.FullScreen) { _config.FullScreenModifiers = modifiers; _config.FullScreenVirtualKeyCode = vkCode; _config.FullScreenHotkeyString = newHotkeyString; }
                     else if (_settingHotkeyMode == HotkeySettingMode.Region) { _config.RegionModifiers = modifiers; _config.RegionVirtualKeyCode = vkCode; _config.RegionHotkeyString = newHotkeyString; }
+                    else if (_settingHotkeyMode == HotkeySettingMode.GifRecord) { _config.GifRecordModifiers = modifiers; _config.GifRecordVirtualKeyCode = vkCode; _config.GifRecordHotkeyString = newHotkeyString; } // Added for GIF Record
                     InitializeHotKeys(); SaveConfig(); UpdateHotkeyDisplay();
                 } else { StatusText.Text = "无效的热键组合 (需包含Ctrl/Shift/Alt + 普通键)"; LogToFile("MainWindow: 无效的热键组合"); }
             } else { LogToFile("MainWindow: 按下纯修饰键或Esc，等待或取消..."); if (e.Key != Key.Escape) handled = false; }
             if (e.Key != Key.LeftCtrl && e.Key != Key.RightCtrl && e.Key != Key.LeftShift && e.Key != Key.RightShift && e.Key != Key.LeftAlt && e.Key != Key.RightAlt && e.Key != Key.LWin && e.Key != Key.RWin && e.Key != Key.System)
-            { _settingHotkeyMode = HotkeySettingMode.None; SetFullScreenHotkeyButton.IsEnabled = true; SetRegionHotkeyButton.IsEnabled = true; LogToFile("MainWindow: 退出热键设置模式"); if (StatusText != null && !StatusText.Text.Contains("注册成功") && !StatusText.Text.Contains("注册失败")) { Dispatcher.UIThread.Post(UpdateStatusTextWithHotkeys, DispatcherPriority.Background); } }
+            { _settingHotkeyMode = HotkeySettingMode.None; SetFullScreenHotkeyButton.IsEnabled = true; SetRegionHotkeyButton.IsEnabled = true; SetGifRecordHotkeyButton.IsEnabled = true; LogToFile("MainWindow: 退出热键设置模式"); if (StatusText != null && !StatusText.Text.Contains("注册成功") && !StatusText.Text.Contains("注册失败")) { Dispatcher.UIThread.Post(UpdateStatusTextWithHotkeys, DispatcherPriority.Background); } } // Enable GIF button too
         }
         // Removed _isCapturing check here, Esc is handled by RegionSelectionWindow now
         // else if (_isCapturing) { ... }
@@ -698,7 +759,7 @@ public partial class MainWindow : Window
     {
          if (StatusText != null && _settingHotkeyMode == HotkeySettingMode.None)
          {
-              StatusText.Text = $"全屏: {_config.FullScreenHotkeyString} | 区域: {_config.RegionHotkeyString}";
+              StatusText.Text = $"全屏: {_config.FullScreenHotkeyString} | 区域: {_config.RegionHotkeyString} | GIF: {_config.GifRecordHotkeyString}"; // Added GIF hotkey
          }
     }
 
@@ -722,12 +783,518 @@ public partial class MainWindow : Window
          Dispatcher.UIThread.Post(() => RegionButton_Click(this, new RoutedEventArgs()), DispatcherPriority.Normal);
      }
 
-     // TODO: Review if OnKeyDown logic for hotkeys is still needed or should be removed.
- }
+    // New trigger for GIF Record hotkey
+    private void TriggerGifRecord()
+    {
+        LogToFile("MainWindow: 全局GIF录制热键触发");
+        Dispatcher.UIThread.Post(() => RecordGifButton_Click(this, new RoutedEventArgs()), DispatcherPriority.Normal);
+    }
+
+    private async void RecordGifButton_Click(object sender, RoutedEventArgs e)
+    {
+        LogToFile($"MainWindow: RecordGifButton clicked, _isRecording: {_isRecording}");
+        if (_isCapturing) // Prevent GIF recording if screenshot is in progress
+        {
+            LogToFile("MainWindow: Cannot start GIF recording, a screenshot capture is in progress.");
+            StatusText.Text = "正在进行截图操作，请稍后再试";
+            return;
+        }
+
+        if (!_isRecording)
+        {
+            // Start Recording
+            // 1. Prompt for region selection first
+            StatusText.Text = "请选择GIF录制区域...";
+            LogToFile("MainWindow: Initiating GIF region selection.");
+
+            System.Drawing.Bitmap? bgBitmapForGif = null;
+            AvaloniaBitmap? avaloniaBgBitmapForGif = null;
+            Rect? selectedGifRegion = null;
+
+            try
+            {
+                // Similar to StartRegionCapture for getting background
+                await Task.Delay(200); // Allow UI to update
+                var screen = this.Screens.Primary ?? this.Screens.All.FirstOrDefault();
+                if (screen == null) throw new Exception("无法获取屏幕信息");
+
+                var pixelSize = screen.Bounds.Size;
+                bgBitmapForGif = new System.Drawing.Bitmap(pixelSize.Width, pixelSize.Height);
+                using (var graphics = Graphics.FromImage(bgBitmapForGif))
+                {
+                    graphics.CopyFromScreen(0, 0, 0, 0, new System.Drawing.Size(pixelSize.Width, pixelSize.Height));
+                }
+                using (var ms = new MemoryStream())
+                {
+                    bgBitmapForGif.Save(ms, ImageFormat.Png);
+                    ms.Position = 0;
+                    avaloniaBgBitmapForGif = new AvaloniaBitmap(ms);
+                }
+                // We don't need to keep bgBitmapForGif beyond this, as GIF frames are captured live.
+                bgBitmapForGif.Dispose(); 
+                bgBitmapForGif = null;
+
+                var selectionWindow = new RegionSelectionWindow(avaloniaBgBitmapForGif, "选择GIF录制区域");
+                await selectionWindow.ShowDialog<Rect?>(this);
+                selectedGifRegion = selectionWindow.SelectedRegion;
+            }
+            catch (Exception ex)
+            {
+                LogToFile($"MainWindow: GIF region selection error: {ex}");
+                StatusText.Text = "区域选择失败: " + ex.Message.Split('\n')[0];
+                bgBitmapForGif?.Dispose(); // Ensure disposal
+                avaloniaBgBitmapForGif?.Dispose();
+                return;
+            }
+            finally
+            {
+                avaloniaBgBitmapForGif?.Dispose(); // Dispose Avalonia bitmap
+            }
+
+            if (!selectedGifRegion.HasValue || selectedGifRegion.Value.Width <= 1 || selectedGifRegion.Value.Height <= 1)
+            {
+                StatusText.Text = "GIF录制已取消或区域无效";
+                LogToFile("MainWindow: GIF recording cancelled or invalid region.");
+                return;
+            }
+
+            _gifRecordingRegion = selectedGifRegion.Value;
+            LogToFile($"MainWindow: GIF recording region selected: {_gifRecordingRegion}");
+
+            // Start 3-second countdown
+            for (int i = 3; i > 0; i--)
+            {
+                SetStatus($"{i}秒后开始录制...", true);
+                await Task.Delay(1000); // Wait 1 second
+            }
+
+            _isRecording = true;
+            _gifFrames.Clear(); 
+            RecordGifButton.Content = "停止录制";
+            FullScreenButton.IsEnabled = false;
+            RegionButton.IsEnabled = false;
+            StatusText.Text = "GIF录制中...";
+            LogToFile("MainWindow: GIF recording started for selected region.");
+
+            _recordingTimer = new System.Threading.Timer(async _ => await CaptureGifFrame(), 
+                                            null, 
+                                            TimeSpan.Zero, 
+                                            TimeSpan.FromMilliseconds(1000 / _framesPerSecond));
+        }
+        else
+        {
+            // Stop Recording
+            _isRecording = false;
+            if (_recordingTimer != null)
+            {
+                await _recordingTimer.DisposeAsync();
+                _recordingTimer = null;
+            }
+            RecordGifButton.Content = "录制GIF";
+            FullScreenButton.IsEnabled = true;
+            RegionButton.IsEnabled = true;
+            LogToFile("MainWindow: GIF recording stopped.");
+
+            if (_gifFrames.Count > 0)
+            {
+                StatusText.Text = "正在保存GIF...";
+                await SaveGifAsync(new List<System.Drawing.Bitmap>(_gifFrames)); // Pass a copy
+            }
+            else
+            {
+                StatusText.Text = "GIF录制已取消或无帧数据";
+            }
+            _gifFrames.Clear(); // Clear frames after attempting to save
+        }
+    }
+
+    private async Task CaptureGifFrame()
+    {
+        if (!_isRecording || !_gifRecordingRegion.HasValue) return;
+
+        Rect regionToCapture = _gifRecordingRegion.Value;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            LogToFile($"MainWindow: Capturing GIF frame for region {regionToCapture}.");
+            try
+            {
+                var screen = Screens.Primary; // Assuming region is on primary screen for now
+                                          // More robust: find screen containing the major part of regionToCapture
+                if (screen == null)
+                {
+                    LogToFile("MainWindow: CaptureGifFrame - No primary screen found for GIF region.");
+                    return; 
+                }
+
+                var scale = screen.Scaling;
+
+                // RegionToCapture coordinates are logical pixels from RegionSelectionWindow (which covers primary screen)
+                // We need to convert them to physical pixels for CopyFromScreen
+                int scaledX = (int)(regionToCapture.X * scale);
+                int scaledY = (int)(regionToCapture.Y * scale);
+                int scaledWidth = (int)(regionToCapture.Width * scale);
+                int scaledHeight = (int)(regionToCapture.Height * scale);
+
+                // Ensure width and height are positive after scaling and conversion to int
+                if (scaledWidth <= 0 || scaledHeight <= 0)
+                {
+                    LogToFile($"MainWindow: CaptureGifFrame - Invalid scaled dimensions for region: W={scaledWidth}, H={scaledHeight}. Original: {regionToCapture}");
+                    // Optionally stop recording or skip frame
+                    _isRecording = false; // Stop recording if region is invalid
+                     if (_recordingTimer != null) _recordingTimer.Dispose(); _recordingTimer = null;
+                     RecordGifButton.Content = "录制GIF";
+                     FullScreenButton.IsEnabled = true;
+                     RegionButton.IsEnabled = true;
+                     StatusText.Text = "GIF区域无效，已停止";
+                    return;
+                }
+
+                var bitmap = new System.Drawing.Bitmap(scaledWidth, scaledHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+                {
+                    // CopyFromScreen expects top-left X,Y in physical pixels of the screen
+                    graphics.CopyFromScreen(scaledX, scaledY, 0, 0, new System.Drawing.Size(scaledWidth, scaledHeight), CopyPixelOperation.SourceCopy);
+                }
+                _gifFrames.Add(bitmap); 
+                LogToFile($"MainWindow: GIF frame captured, total frames: {_gifFrames.Count}. Region: X={scaledX} Y={scaledY} W={scaledWidth} H={scaledHeight}");
+            }
+            catch (Exception ex)
+            {
+                LogToFile($"MainWindow: CaptureGifFrame error: {ex.Message}");
+                // Optionally stop recording on error or skip frame
+            }
+        });
+    }
+
+    private async Task SaveGifAsync(List<System.Drawing.Bitmap> frames)
+    {
+        if (frames == null || frames.Count == 0)
+        {
+            LogToFile("MainWindow: SaveGifAsync - No frames to save.");
+            StatusText.Text = "没有帧可用于保存GIF";
+            return;
+        }
+
+        LogToFile($"MainWindow: SaveGifAsync - Saving {frames.Count} frames.");
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null) 
+        {
+            LogToFile("MainWindow: SaveGifAsync - TopLevel is null.");
+            StatusText.Text = "无法保存GIF: 内部错误";
+            return;
+        }
+
+        var storageProvider = topLevel.StorageProvider;
+        var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "保存GIF动画",
+            SuggestedFileName = $"recording_{DateTime.Now:yyyyMMdd_HHmmss}.gif",
+            FileTypeChoices = new[] { new FilePickerFileType("GIF Image") { Patterns = new[] { "*.gif" } } },
+            DefaultExtension = "gif"
+        });
+
+        if (file != null)
+        {
+            try
+            {
+                StatusText.Text = "正在编码GIF...";
+                await Task.Run(() => // Run encoding on a background thread
+                {
+                    // New saving logic using AnimatedGif library
+                    if (file == null) return;
+                    string filePath = file.TryGetLocalPath(); // Attempt to get local path
+                    if (string.IsNullOrEmpty(filePath))
+                    {
+                        LogToFile("MainWindow: SaveGifAsync - Could not get local path from storage file for AnimatedGif.");
+                        // Fallback or error handling - AnimatedGif.Create needs a file path.
+                        // For now, we'll log and skip saving if path is not available.
+                        // A more robust solution might save to a temp path then stream to the storage file if direct path isn't usable by the lib.
+                        frames.ForEach(f => f.Dispose()); // Clean up frames
+                        frames.Clear();
+                        StatusText.Text = "保存GIF失败: 无法获取本地路径";
+                        return;
+                    }
+
+                    int frameDelayMilliseconds = 1000 / _framesPerSecond;
+                    LogToFile($"MainWindow: Saving GIF with AnimatedGif. Target FPS: {_framesPerSecond}, Delay: {frameDelayMilliseconds}ms");
+
+                    // AnimatedGif.Create takes file path and default frame delay in milliseconds.
+                    using (var gif = AnimatedGif.AnimatedGif.Create(filePath, frameDelayMilliseconds))
+                    {
+                        foreach (var frameBitmap in frames)
+                        {
+                            // The AddFrame method in AnimatedGif typically expects an Image.
+                            // We are using System.Drawing.Bitmap which is a subclass of Image.
+                            // The `delay` parameter in AddFrame (-1 uses default, 0 is often not recommended as some viewers ignore it, >0 for specific delay in ms)
+                            // The `quality` parameter is GifQuality.Default, GifQuality.Bit8, etc.
+                            gif.AddFrame(frameBitmap, delay: -1, quality: GifQuality.Bit8); 
+                            // We use delay: -1 to use the default delay set in AnimatedGif.Create.
+                        }
+                    }
+                    LogToFile("MainWindow: AnimatedGif finished writing.");
+                });
+
+                LogToFile($"MainWindow: GIF saved to {file.Name}");
+                StatusText.Text = $"GIF已保存: {file.Name}";
+            }
+            catch (Exception ex)
+            {
+                LogToFile($"MainWindow: SaveGifAsync error: {ex.Message}");
+                StatusText.Text = "保存GIF失败: " + ex.Message;
+            }
+            finally
+            {
+                // Dispose all bitmaps in the frames list
+                foreach (var frame in frames)
+                {
+                    frame.Dispose();
+                }
+                frames.Clear(); 
+            }
+        }
+        else
+        {
+            LogToFile("MainWindow: SaveGifAsync - Save operation cancelled by user.");
+            StatusText.Text = "GIF保存已取消";
+            // Dispose frames if save is cancelled
+            foreach (var frame in frames)
+            {
+                frame.Dispose();
+            }
+            frames.Clear();
+        }
+    }
+
+    public void SetStatus(string message, bool appendToLog = true)
+    {
+        if (StatusText != null)
+        {
+            StatusText.Text = message;
+        }
+        if (appendToLog)
+        {
+            LogToFile($"Status Update: {message}");
+        }
+    }
+
+    public Config GetConfig() // New public method to access the current config
+    {
+        return _config;
+    }
+
+    private async void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        LogToFile("MainWindow: SettingsButton clicked.");
+        var settingsWindow = new SettingsWindow(_config); // Pass the current config
+        var result = await settingsWindow.ShowDialog<bool?>(this); // Show as dialog
+
+        if (result.HasValue && result.Value) // If OK was clicked in SettingsWindow
+        {
+            LogToFile("MainWindow: SettingsWindow closed with OK. Saving configuration.");
+            SaveConfig(); // Save any changes made to _config by SettingsWindow
+            // Optionally, re-validate or update any UI elements in MainWindow that depend on settings
+            // For Imgur Client ID, the check is done during upload, so no immediate UI update needed here usually.
+            // However, we can update the general status if needed.
+            if (string.IsNullOrWhiteSpace(_config.ImgurClientId))
+            {
+                 SetStatus("提示: Imgur Client ID 未设置，上传功能不可用。", false);
+            }
+            else
+            {
+                // UpdateStatusTextWithHotkeys(); // Or a more general status update
+            }
+        }
+        else
+        {
+            LogToFile("MainWindow: SettingsWindow closed with Cancel or no explicit save.");
+            // Reload config if settings were cancelled to revert any uncommitted changes in the passed _config object,
+            // if SettingsWindow modifies it directly even on Cancel. For now, assume OK commits.
+            // LoadConfig(); 
+            // UpdateUiFromConfig(); 
+        }
+    }
+}
 
 // --- Config Class --- (Keep as is)
-public class Config { /* ... */ public string FullScreenHotkeyString { get; set; } = "Ctrl+Shift+U"; public string RegionHotkeyString { get; set; } = "Ctrl+Shift+A"; public bool UseDefaultSavePath { get; set; } = false; public string? DefaultSavePath { get; set; } = null; public int NextSaveFileNumber { get; set; } = 1; [JsonIgnore] public uint FullScreenModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT; [JsonIgnore] public uint FullScreenVirtualKeyCode { get; set; } = KeyInterop.VirtualKeyFromKey(Key.U); [JsonIgnore] public uint RegionModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT; [JsonIgnore] public uint RegionVirtualKeyCode { get; set; } = KeyInterop.VirtualKeyFromKey(Key.A); public void UpdateModifiersAndVKCodeFromStrings() { KeyGesture? fsGesture = KeyGestureConverter.StringToKeyGesture(FullScreenHotkeyString); if (fsGesture != null) { uint modifiers = 0; if (fsGesture.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= NativeMethods.MOD_CONTROL; if (fsGesture.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= NativeMethods.MOD_SHIFT; if (fsGesture.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= NativeMethods.MOD_ALT; uint vkCode = KeyInterop.VirtualKeyFromKey(fsGesture.Key); if (vkCode != 0 && modifiers != 0) { this.FullScreenModifiers = modifiers; this.FullScreenVirtualKeyCode = vkCode; } else { ResetToDefaultFullScreenHotkey(); } } else { ResetToDefaultFullScreenHotkey(); } KeyGesture? rGesture = KeyGestureConverter.StringToKeyGesture(RegionHotkeyString); if (rGesture != null) { uint modifiers = 0; if (rGesture.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= NativeMethods.MOD_CONTROL; if (rGesture.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= NativeMethods.MOD_SHIFT; if (rGesture.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= NativeMethods.MOD_ALT; uint vkCode = KeyInterop.VirtualKeyFromKey(rGesture.Key); if (vkCode != 0 && modifiers != 0) { this.RegionModifiers = modifiers; this.RegionVirtualKeyCode = vkCode; } else { ResetToDefaultRegionHotkey(); } } else { ResetToDefaultRegionHotkey(); } } private void ResetToDefaultFullScreenHotkey() { FullScreenHotkeyString = "Ctrl+Shift+U"; FullScreenModifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT; FullScreenVirtualKeyCode = KeyInterop.VirtualKeyFromKey(Key.U); LogToFile($"警告: 全屏快捷键无效或无法解析，已重置为默认值 {FullScreenHotkeyString}"); } private void ResetToDefaultRegionHotkey() { RegionHotkeyString = "Ctrl+Shift+A"; RegionModifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT; RegionVirtualKeyCode = KeyInterop.VirtualKeyFromKey(Key.A); LogToFile($"警告: 区域快捷键无效或无法解析，已重置为默认值 {RegionHotkeyString}"); } private static void LogToFile(string message) => MainWindow.LogToFile(message); }
+public class Config
+{
+    public string FullScreenHotkeyString { get; set; } = "Ctrl+Shift+U";
+    public string RegionHotkeyString { get; set; } = "Ctrl+Shift+A";
+    public string GifRecordHotkeyString { get; set; } = "Ctrl+Shift+G"; // Default GIF Record Hotkey
+    public bool UseDefaultSavePath { get; set; } = false;
+    public string? DefaultSavePath { get; set; } = null;
+    public int NextSaveFileNumber { get; set; } = 1;
+    public string? ImgurClientId { get; set; } = null; // Added for Imgur Client ID
+    [JsonIgnore] public uint FullScreenModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;
+    [JsonIgnore] public uint FullScreenVirtualKeyCode { get; set; } = KeyInterop.VirtualKeyFromKey(Key.U);
+    [JsonIgnore] public uint RegionModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;
+    [JsonIgnore] public uint RegionVirtualKeyCode { get; set; } = KeyInterop.VirtualKeyFromKey(Key.A);
+    [JsonIgnore] public uint GifRecordModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT; // Default modifiers for GIF Record
+    [JsonIgnore] public uint GifRecordVirtualKeyCode { get; set; } = KeyInterop.VirtualKeyFromKey(Key.G); // Default VK_CODE for GIF Record
+
+    public void UpdateModifiersAndVKCodeFromStrings()
+    {
+        KeyGesture? fsGesture = KeyGestureConverter.StringToKeyGesture(FullScreenHotkeyString);
+        if (fsGesture != null)
+        {
+            uint modifiers = 0;
+            if (fsGesture.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= NativeMethods.MOD_CONTROL;
+            if (fsGesture.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= NativeMethods.MOD_SHIFT;
+            if (fsGesture.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= NativeMethods.MOD_ALT;
+            uint vkCode = KeyInterop.VirtualKeyFromKey(fsGesture.Key);
+
+            if (vkCode != 0 && modifiers != 0)
+            {
+                this.FullScreenModifiers = modifiers;
+                this.FullScreenVirtualKeyCode = vkCode;
+            }
+            else
+            {
+                ResetToDefaultFullScreenHotkey();
+            }
+        }
+        else
+        {
+            ResetToDefaultFullScreenHotkey();
+        }
+
+        KeyGesture? rGesture = KeyGestureConverter.StringToKeyGesture(RegionHotkeyString);
+        if (rGesture != null)
+        {
+            uint modifiers = 0;
+            if (rGesture.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= NativeMethods.MOD_CONTROL;
+            if (rGesture.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= NativeMethods.MOD_SHIFT;
+            if (rGesture.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= NativeMethods.MOD_ALT;
+            uint vkCode = KeyInterop.VirtualKeyFromKey(rGesture.Key);
+
+            if (vkCode != 0 && modifiers != 0)
+            {
+                this.RegionModifiers = modifiers;
+                this.RegionVirtualKeyCode = vkCode;
+            }
+            else
+            {
+                ResetToDefaultRegionHotkey();
+            }
+        }
+        else
+        {
+            ResetToDefaultRegionHotkey();
+        }
+
+        KeyGesture? gifGesture = KeyGestureConverter.StringToKeyGesture(GifRecordHotkeyString);
+        if (gifGesture != null)
+        {
+            uint modifiers = 0;
+            if (gifGesture.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= NativeMethods.MOD_CONTROL;
+            if (gifGesture.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= NativeMethods.MOD_SHIFT;
+            if (gifGesture.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= NativeMethods.MOD_ALT;
+            uint vkCode = KeyInterop.VirtualKeyFromKey(gifGesture.Key);
+
+            if (vkCode != 0 && modifiers != 0)
+            {
+                this.GifRecordModifiers = modifiers;
+                this.GifRecordVirtualKeyCode = vkCode;
+            }
+            else
+            {
+                ResetToDefaultGifRecordHotkey();
+            }
+        }
+        else
+        {
+            ResetToDefaultGifRecordHotkey();
+        }
+    }
+
+    private void ResetToDefaultFullScreenHotkey()
+    {
+        FullScreenHotkeyString = "Ctrl+Shift+U";
+        FullScreenModifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;
+        FullScreenVirtualKeyCode = KeyInterop.VirtualKeyFromKey(Key.U);
+        LogToFile($"警告: 全屏快捷键无效或无法解析，已重置为默认值 {FullScreenHotkeyString}");
+    }
+
+    private void ResetToDefaultRegionHotkey()
+    {
+        RegionHotkeyString = "Ctrl+Shift+A";
+        RegionModifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;
+        RegionVirtualKeyCode = KeyInterop.VirtualKeyFromKey(Key.A);
+        LogToFile($"警告: 区域快捷键无效或无法解析，已重置为默认值 {RegionHotkeyString}");
+    }
+
+    private void ResetToDefaultGifRecordHotkey()
+    {
+        GifRecordHotkeyString = "Ctrl+Shift+G";
+        GifRecordModifiers = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;
+        GifRecordVirtualKeyCode = KeyInterop.VirtualKeyFromKey(Key.G);
+        LogToFile($"警告: GIF录制快捷键无效或无法解析，已重置为默认值 {GifRecordHotkeyString}");
+    }
+
+    private static void LogToFile(string message) => MainWindow.LogToFile(message);
+}
 
 // --- Helper Classes --- (Keep as is)
-public static class KeyGestureConverter { /* ... */ public static string KeyGestureToString(Key key, KeyModifiers modifiers) { var parts = new List<string>(); if (modifiers.HasFlag(KeyModifiers.Control)) parts.Add("Ctrl"); if (modifiers.HasFlag(KeyModifiers.Shift)) parts.Add("Shift"); if (modifiers.HasFlag(KeyModifiers.Alt)) parts.Add("Alt"); if (modifiers.HasFlag(KeyModifiers.Meta)) parts.Add("Win"); parts.Add(key.ToString()); return string.Join("+", parts); } public static KeyGesture? StringToKeyGesture(string? s) { if (string.IsNullOrWhiteSpace(s)) return null; var parts = s.Split('+'); if (parts.Length == 0) return null; Key key = Key.None; KeyModifiers modifiers = KeyModifiers.None; foreach (var part in parts) { var trimmedPart = part.Trim(); if (Enum.TryParse<Key>(trimmedPart, true, out var parsedKey)) { key = parsedKey; } else if (trimmedPart.Equals("Ctrl", StringComparison.OrdinalIgnoreCase)) { modifiers |= KeyModifiers.Control; } else if (trimmedPart.Equals("Shift", StringComparison.OrdinalIgnoreCase)) { modifiers |= KeyModifiers.Shift; } else if (trimmedPart.Equals("Alt", StringComparison.OrdinalIgnoreCase)) { modifiers |= KeyModifiers.Alt; } else if (trimmedPart.Equals("Win", StringComparison.OrdinalIgnoreCase) || trimmedPart.Equals("Meta", StringComparison.OrdinalIgnoreCase)) { modifiers |= KeyModifiers.Meta; } } if (key != Key.None) { return new KeyGesture(key, modifiers); } return null; } }
-public static class KeyInterop { /* ... */ public static uint VirtualKeyFromKey(Key key) => key switch { Key.A => 0x41, Key.B => 0x42, Key.C => 0x43, Key.D => 0x44, Key.E => 0x45, Key.F => 0x46, Key.G => 0x47, Key.H => 0x48, Key.I => 0x49, Key.J => 0x4A, Key.K => 0x4B, Key.L => 0x4C, Key.M => 0x4D, Key.N => 0x4E, Key.O => 0x4F, Key.P => 0x50, Key.Q => 0x51, Key.R => 0x52, Key.S => 0x53, Key.T => 0x54, Key.U => 0x55, Key.V => 0x56, Key.W => 0x57, Key.X => 0x58, Key.Y => 0x59, Key.Z => 0x5A, Key.D0 => 0x30, Key.D1 => 0x31, Key.D2 => 0x32, Key.D3 => 0x33, Key.D4 => 0x34, Key.D5 => 0x35, Key.D6 => 0x36, Key.D7 => 0x37, Key.D8 => 0x38, Key.D9 => 0x39, Key.F1 => 0x70, Key.F2 => 0x71, Key.F3 => 0x72, Key.F4 => 0x73, Key.F5 => 0x74, Key.F6 => 0x75, Key.F7 => 0x76, Key.F8 => 0x77, Key.F9 => 0x78, Key.F10 => 0x79, Key.F11 => 0x7A, Key.F12 => 0x7B, Key.PrintScreen => 0x2C, _ => 0 }; }
+public static class KeyGestureConverter
+{
+    public static string KeyGestureToString(Key key, KeyModifiers modifiers)
+    {
+        var parts = new List<string>();
+        if (modifiers.HasFlag(KeyModifiers.Control)) parts.Add("Ctrl");
+        if (modifiers.HasFlag(KeyModifiers.Shift)) parts.Add("Shift");
+        if (modifiers.HasFlag(KeyModifiers.Alt)) parts.Add("Alt");
+        if (modifiers.HasFlag(KeyModifiers.Meta)) parts.Add("Win");
+        parts.Add(key.ToString());
+        return string.Join("+", parts);
+    }
+
+    public static KeyGesture? StringToKeyGesture(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        var parts = s.Split('+');
+        if (parts.Length == 0) return null;
+        Key key = Key.None;
+        KeyModifiers modifiers = KeyModifiers.None;
+        foreach (var part in parts)
+        {
+            var trimmedPart = part.Trim();
+            if (Enum.TryParse<Key>(trimmedPart, true, out var parsedKey))
+            {
+                key = parsedKey;
+            }
+            else if (trimmedPart.Equals("Ctrl", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= KeyModifiers.Control;
+            }
+            else if (trimmedPart.Equals("Shift", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= KeyModifiers.Shift;
+            }
+            else if (trimmedPart.Equals("Alt", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= KeyModifiers.Alt;
+            }
+            else if (trimmedPart.Equals("Win", StringComparison.OrdinalIgnoreCase) || trimmedPart.Equals("Meta", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= KeyModifiers.Meta;
+            }
+        }
+        if (key != Key.None)
+        {
+            return new KeyGesture(key, modifiers);
+        }
+        return null;
+    }
+}
+
+public static class KeyInterop
+{
+    public static uint VirtualKeyFromKey(Key key) => key switch
+    {
+        Key.A => 0x41, Key.B => 0x42, Key.C => 0x43, Key.D => 0x44, Key.E => 0x45, Key.F => 0x46, Key.G => 0x47, Key.H => 0x48, Key.I => 0x49, Key.J => 0x4A, Key.K => 0x4B, Key.L => 0x4C, Key.M => 0x4D, Key.N => 0x4E, Key.O => 0x4F, Key.P => 0x50, Key.Q => 0x51, Key.R => 0x52, Key.S => 0x53, Key.T => 0x54, Key.U => 0x55, Key.V => 0x56, Key.W => 0x57, Key.X => 0x58, Key.Y => 0x59, Key.Z => 0x5A,
+        Key.D0 => 0x30, Key.D1 => 0x31, Key.D2 => 0x32, Key.D3 => 0x33, Key.D4 => 0x34, Key.D5 => 0x35, Key.D6 => 0x36, Key.D7 => 0x37, Key.D8 => 0x38, Key.D9 => 0x39,
+        Key.F1 => 0x70, Key.F2 => 0x71, Key.F3 => 0x72, Key.F4 => 0x73, Key.F5 => 0x74, Key.F6 => 0x75, Key.F7 => 0x76, Key.F8 => 0x77, Key.F9 => 0x78, Key.F10 => 0x79, Key.F11 => 0x7A, Key.F12 => 0x7B, Key.PrintScreen => 0x2C,
+        _ => 0
+    };
+}
