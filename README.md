@@ -4,7 +4,7 @@
 
 一款基于 C#、.NET 8 和 Avalonia UI 构建的现代化、轻量级 Windows 截图工具，采用 NativeAOT 技术发布，旨在提供流畅的用户体验。
 
-![主界面截图](https://i.imgur.com/A5HauBP.png) <!-- 提示：请替换为您的实际截图链接 -->
+![主界面截图](https://i.imgur.com/NTl2Ujz.png) <!-- 提示：请替换为您的实际截图链接 -->
 
 ## ✨ 功能特性
 
@@ -28,7 +28,7 @@
 
 ## 🚀 安装
 
-1.  前往本项目的 [GitHub Releases](https://github.com/YOUR_USERNAME/YOUR_REPO/releases) 页面下载最新的 `简易截图工具Setup.exe` 安装包。 <!-- 提示：请替换为您的实际 GitHub 仓库链接 -->
+1.  前往本项目的 [GitHub Releases](https://github.com/ielts0826/-SimpleScreenShot/releases) 页面下载最新的 `简易截图工具Setup.exe` 安装包。 <!-- 提示：请替换为您的实际 GitHub 仓库链接 -->
 2.  运行安装包，按照提示完成安装。
 3.  由于使用了 NativeAOT 技术，您**无需**在电脑上预先安装 .NET 运行时。
 
