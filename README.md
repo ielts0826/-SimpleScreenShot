@@ -4,7 +4,7 @@
 
 一款基于 C#、.NET 8 和 Avalonia UI 构建的现代化、轻量级 Windows 截图与GIF录制工具，采用 NativeAOT 技术发布，旨在提供流畅的用户体验。
 
-![主界面截图](https://i.imgur.com/NTl2Ujz.png) <!-- 提示：请替换为您的实际主界面截图链接 -->
+![主界面截图](https://i.imgur.com/Wj18JGu.png) <!-- 提示：请替换为您的实际主界面截图链接 -->
 
 ## ✨ 功能特性
 
@@ -68,6 +68,7 @@
 <!-- 提示：建议添加GIF演示录制功能和Imgur上传流程 -->
 ![区域选择演示](images/region_select.gif) <!-- 提示：请替换为您的实际 GIF 链接 -->
 ![预览窗口演示](images/preview_window.gif) <!-- 提示：请替换为您的实际 GIF 链接 -->
+
 
 ## 🛠️ 技术栈
 
