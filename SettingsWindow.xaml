@@ -41,22 +41,47 @@
         <Style Selector="Button:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="#99777777"/>
         </Style>
+        <Style Selector="ScrollViewer">
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
     </Window.Styles>
 
     <Border Padding="20">
-        <StackPanel Spacing="15">
-            <TextBlock Text="Imgur API 设置" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-            
-            <TextBlock Text="匿名上传需要 Client ID。您可以从 Imgur 网站注册您的应用以获取。" TextWrapping="Wrap" FontSize="11" Foreground="#BBBBBB"/>
-            
-            <TextBlock Text="Imgur Client ID:" Margin="0,5,0,0"/>
-            <TextBox Name="ImgurClientIdTextBox" Watermark="在此输入您的 Imgur Client ID"/>
-            <TextBlock Name="ImgurClientIdStatusText" FontSize="11" TextWrapping="Wrap" MinHeight="30"/>
+        <ScrollViewer>
+            <StackPanel Spacing="15">
+                <TextBlock Text="Imgur API 设置" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                
+                <TextBlock Text="匿名上传需要 Client ID。您可以从 Imgur 网站注册您的应用以获取。" TextWrapping="Wrap" FontSize="11" Foreground="#BBBBBB"/>
+                
+                <TextBlock Text="Imgur Client ID:" Margin="0,5,0,0"/>
+                <TextBox Name="ImgurClientIdTextBox" Watermark="在此输入您的 Imgur Client ID"/>
+                <TextBlock Name="ImgurClientIdStatusText" FontSize="11" TextWrapping="Wrap" MinHeight="30"/>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                <Button Name="OkButton" Content="确定" Click="OkButton_Click" IsDefault="True"/>
-                <Button Name="CancelButton" Content="取消" Click="CancelButton_Click" IsCancel="True"/>
+                <TextBlock Text="Imgur Client Secret:" Margin="0,10,0,0"/>
+                <TextBox Name="ImgurClientSecretTextBox" Watermark="在此输入您的 Imgur Client Secret (可选)"
+                         ToolTip.Tip="如果您希望上传到自己的账户而不是匿名上传，则需要 Client Secret。"/>
+                <TextBlock Name="ImgurClientSecretStatusText" FontSize="11" TextWrapping="Wrap" MinHeight="30"/>
+
+                <!-- PIN Based OAuth Flow Elements -->
+                <Border Padding="10,5" Margin="0,10,0,0" BorderThickness="1" BorderBrush="#555555" CornerRadius="4">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="通过 PIN 连接到您的 Imgur 账户:" FontWeight="SemiBold" FontSize="12"/>
+                        <Button Name="GetPinButton" Content="1. 获取 Imgur 授权 PIN" Click="GetPinButton_Click" HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="将浏览器中显示的 PIN 码粘贴到下方:" FontSize="11" Foreground="#BBBBBB"/>
+                        <TextBox Name="ImgurPinTextBox" Watermark="在此输入 PIN 码"/>
+                        <Button Name="SubmitPinButton" Content="2. 提交 PIN 并授权" Click="SubmitPinButton_Click" HorizontalAlignment="Stretch"/>
+                        <TextBlock Name="PinAuthStatusText" FontSize="11" TextWrapping="Wrap" MinHeight="25"/>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                    <Button Name="OkButton" Content="确定" Click="OkButton_Click" IsDefault="True"/>
+                    <Button Name="CancelButton" Content="取消" Click="CancelButton_Click" IsCancel="True"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+        </ScrollViewer>
     </Border>
 </Window> 

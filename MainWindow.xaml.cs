@@ -1126,6 +1126,10 @@ public class Config
     public string? DefaultSavePath { get; set; } = null;
     public int NextSaveFileNumber { get; set; } = 1;
     public string? ImgurClientId { get; set; } = null; // Added for Imgur Client ID
+    public string? ImgurClientSecret { get; set; } = null; // Added for Imgur Client Secret
+    public string? ImgurAccessToken { get; set; } = null; // Added for Imgur Access Token
+    public string? ImgurRefreshToken { get; set; } = null; // Added for Imgur Refresh Token
+    public DateTime? ImgurTokenExpiresAt { get; set; } = null; // Added for Imgur Token Expiration
     [JsonIgnore] public uint FullScreenModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;
     [JsonIgnore] public uint FullScreenVirtualKeyCode { get; set; } = KeyInterop.VirtualKeyFromKey(Key.U);
     [JsonIgnore] public uint RegionModifiers { get; set; } = NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT;

@@ -140,49 +140,62 @@ public partial class TopmostWindow : Window
 
         if (mw == null)
         {
-            MainWindow.LogToFile("TopmostWindow: Cannot access MainWindow instance.");
-            // Show local error maybe?
+            MainWindow.LogToFile("TopmostWindow: Cannot access MainWindow instance for upload.");
+            SetUploadStatus("错误: 无法访问主配置", true);
             if (UploadButton != null) UploadButton.IsEnabled = true;
             return;
         }
 
-        // Check if Imgur Client ID is configured
-        string? clientId = mw.GetConfig().ImgurClientId;
+        Config currentConfig = mw.GetConfig();
+        string? clientId = currentConfig.ImgurClientId;
+        string? accessToken = currentConfig.ImgurAccessToken;
+        DateTime? tokenExpiresAt = currentConfig.ImgurTokenExpiresAt;
+
         if (string.IsNullOrWhiteSpace(clientId) || clientId == "YOUR_IMGUR_CLIENT_ID_PLACEHOLDER")
         {
             MainWindow.LogToFile("TopmostWindow: Imgur Client ID is not configured or is invalid.");
-            mw.SetStatus("请先在主窗口设置有效的 Imgur Client ID");
-            if (UploadButton != null) UploadButton.IsEnabled = true; // Re-enable button
-            // Maybe show a dialog? MessageBox.Avalonia can be used for simple dialogs if added.
+            SetUploadStatus("请先在设置中配置有效的 Imgur Client ID", true);
+            if (UploadButton != null) UploadButton.IsEnabled = true; 
             return;
         }
         
-        mw.SetStatus("正在上传到 Imgur...");
+        // Determine if we should use Access Token
+        bool useAuthUpload = false;
+        if (!string.IsNullOrWhiteSpace(accessToken) && tokenExpiresAt.HasValue && tokenExpiresAt.Value > DateTime.UtcNow)
+        {
+            useAuthUpload = true;
+            MainWindow.LogToFile("TopmostWindow: Valid Access Token found. Attempting authenticated upload.");
+        }
+        else if (!string.IsNullOrWhiteSpace(accessToken)) // Token exists but might be expired
+        {
+            MainWindow.LogToFile("TopmostWindow: Access Token found but it might be expired or expiration date is missing. Attempting anonymous upload.");
+            // TODO: Implement token refresh logic here in a future step.
+            // For now, we will fall back to anonymous if the token is expired.
+            // To force re-authentication, user would need to get a new PIN.
+        }
+        else
+        {
+            MainWindow.LogToFile("TopmostWindow: No Access Token found. Attempting anonymous upload.");
+        }
+        
+        SetUploadStatus(useAuthUpload ? "正在上传到您的 Imgur 账户..." : "正在匿名上传到 Imgur...");
 
         try
         {
-            // Convert AvaloniaBitmap to System.Drawing.Bitmap then to byte array for uploading
-            // This is a bit convoluted. If ImgurUploader can take AvaloniaBitmap directly or a stream, it's better.
-            // For now, let's assume ImgurUploader needs a byte array or System.Drawing.Bitmap.
-            
             byte[] imageBytes;
             using (MemoryStream ms = new MemoryStream())
             {
-                // Avalonia's Bitmap.Save expects a stream. We'll save it as PNG into a memory stream.
                 _bitmap.Save(ms); 
                 imageBytes = ms.ToArray();
             }
 
-            string? imageUrl = await ImgurUploader.UploadImageAsync(imageBytes, clientId); // Pass the retrieved Client ID
+            // Pass accessToken if useAuthUpload is true, otherwise it defaults to null for anonymous
+            string? imageUrl = await ImgurUploader.UploadImageAsync(imageBytes, clientId, useAuthUpload ? accessToken : null);
 
             if (!string.IsNullOrEmpty(imageUrl))
             {
                 MainWindow.LogToFile($"TopmostWindow: Image uploaded to Imgur: {imageUrl}");
-                if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopSuccess && desktopSuccess.MainWindow is MainWindow mwSuccess)
-                {
-                    mwSuccess.SetStatus("上传成功! 链接已复制.");
-                }
-                // Copy to clipboard
+                SetUploadStatus("上传成功! 链接已复制.");
                 if (Clipboard != null)
                 {
                     await Clipboard.SetTextAsync(imageUrl);
@@ -191,30 +204,44 @@ public partial class TopmostWindow : Window
                 {
                     MainWindow.LogToFile("TopmostWindow: Clipboard service not available.");
                 }
-                // Optionally close the preview window after successful upload
-                // Close(); 
             }
             else
             {
                 MainWindow.LogToFile("TopmostWindow: Imgur upload failed. No URL returned.");
-                if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopFail && desktopFail.MainWindow is MainWindow mwFail)
-                {
-                    mwFail.SetStatus("Imgur 上传失败.");
-                }
+                SetUploadStatus("Imgur 上传失败.", true);
             }
         }
         catch (Exception ex)
         {
-            MainWindow.LogToFile($"TopmostWindow: Imgur upload exception: {ex.Message}");
-            if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopEx && desktopEx.MainWindow is MainWindow mwEx)
-            {
-                mwEx.SetStatus("上传出错: " + ex.Message.Split('\n')[0]); // Show first line of error
-            }
+            MainWindow.LogToFile($"TopmostWindow: Imgur upload exception: {ex.ToString()}");
+            SetUploadStatus("上传出错: " + ex.Message.Split('\n')[0], true);
         }
         finally
         {
             if (UploadButton != null) UploadButton.IsEnabled = true;
         }
+    }
+
+    // Helper to update status in TopmostWindow itself (can be a new TextBlock)
+    // For now, we can reuse the MainWindow status as a fallback or add a specific one here.
+    private void SetUploadStatus(string message, bool isError = false)
+    {
+        // Placeholder: Ideally, TopmostWindow has its own status TextBlock.
+        // For now, logging and trying to use MainWindow's status for broad feedback.
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is MainWindow mw)
+        {
+            mw.SetStatus(message, isError);
+        }
+        else
+        {
+            MainWindow.LogToFile($"TopmostWindow Status: {message} (isError: {isError})");
+        }
+        // Example: if you add a TextBlock named UploadStatusText to TopmostWindow.xaml
+        // if (this.FindControl<TextBlock>("UploadStatusText") is TextBlock statusText)
+        // {
+        //     statusText.Text = message;
+        //     statusText.Foreground = isError ? Brushes.Red : Brushes.Green;
+        // }
     }
 
     // --- Zoom Logic ---

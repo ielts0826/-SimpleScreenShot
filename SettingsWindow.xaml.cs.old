@@ -44,7 +44,6 @@ public partial class SettingsWindow : Window
 
         ImgurClientIdTextBox.TextChanged += ImgurClientIdTextBox_TextChanged;
         ImgurClientSecretTextBox.TextChanged += ImgurClientSecretTextBox_TextChanged;
-        ImgurPinTextBox.TextChanged += ImgurPinTextBox_TextChanged;
         // PIN Auth Event Handlers are assigned in XAML via Click="HandlerName"
     }
 
@@ -79,11 +78,6 @@ public partial class SettingsWindow : Window
     private void ImgurClientSecretTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
         UpdateImgurClientSecretStatus(true);
-    }
-
-    private void ImgurPinTextBox_TextChanged(object? sender, TextChangedEventArgs e)
-    {
-        UpdatePinAuthControlsState();
     }
 
     private void UpdateImgurClientIdStatus(bool typing = false)
@@ -151,7 +145,7 @@ public partial class SettingsWindow : Window
         }
         else if (string.IsNullOrWhiteSpace(message))
         {
-             PinAuthStatusText.Text = "点击\"获取授权PIN\"按钮，然后在浏览器中授权并复制PIN码到上方输入框中。";
+             PinAuthStatusText.Text = "点击"获取授权PIN"按钮，然后在浏览器中授权并复制PIN码到上方输入框中。";
              PinAuthStatusText.Foreground = Brushes.LightSlateGray;
         }
     }
@@ -233,7 +227,7 @@ public partial class SettingsWindow : Window
                 _config.ImgurRefreshToken = refreshToken;
                 _config.ImgurTokenExpiresAt = expiresAt.Value;
                 
-                UpdatePinAuthStatus("成功获取并保存了 Imgur 授权令牌！点击\"确定\"保存整体设置。", false);
+                UpdatePinAuthStatus("成功获取并保存了 Imgur 授权令牌！点击"确定"保存整体设置。", false);
                 MainWindow.LogToFile($"SettingsWindow: Successfully obtained Imgur tokens. AccessToken (partial): {_config.ImgurAccessToken.Substring(0, Math.Min(_config.ImgurAccessToken.Length, 8))}...");
                 ImgurPinTextBox.Text = string.Empty; // Clear PIN after use
             }
@@ -243,7 +237,7 @@ public partial class SettingsWindow : Window
                 _config.ImgurRefreshToken = null;
                 _config.ImgurTokenExpiresAt = null;
                 UpdatePinAuthStatus("PIN 授权失败：未能从 Imgur 获取到有效的令牌。请检查日志或稍后重试。", true);
-                MainWindow.LogToFile("SettingsWindow: Failed to obtain valid tokens from Imgur (ExchangePinForTokensAsync returned null/empty values).");
+                MainWindow.LogToFile($"SettingsWindow: Failed to obtain valid tokens from Imgur (ExchangePinForTokensAsync returned null/empty values).");
             }
             UpdatePinAuthControlsState(); // Refresh button states/text
         }
